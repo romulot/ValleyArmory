@@ -16,3 +16,22 @@ Os valores abaixo são provisórios e existem para tornar o catálogo validável
 | Ethereal Boots | Botas | Epic | — | — | 2 | — | — | — | 5 | 2.200 | Genie Shoes |
 
 Antes da Fase de aquisição, cada referência e preço deverão ser revistos contra os dados efetivos de Stardew Valley 1.6.15. A Prismatic Blade deve permanecer um sidegrade do endgame, não uma substituição automática das armas Galaxy ou Infinity.
+
+## Unidades internas e apresentação vanilla
+
+Os números da tabela são valores internos de `WeaponData`, não os números
+necessariamente mostrados pelo tooltip. A raridade não participa dessas fórmulas.
+
+- Em espadas e adagas, cada ponto interno de velocidade reduz em 40 ms a duração
+  base de 400 ms do golpe, antes dos modificadores do jogador. O tooltip mostra
+  `Speed / 2` com divisão inteira; valores ímpares, portanto, são arredondados em
+  direção a zero na apresentação.
+- `CritChance` é uma fração (`0.03` = 3% base). Para espadas, o tooltip mostra
+  `round((CritChance - 0.001) / 0.02)`, uma unidade visual vanilla que não deve
+  ser interpretada como porcentagem literal.
+- Adagas aplicam a transformação vanilla `(CritChance + 0.005) * 1.12` antes do
+  uso em combate e da conversão para o tooltip.
+
+Consequentemente, a Miner's Blade mantém `Speed: 1` e `CritChance: 0.03`, mas o
+tooltip vanilla esperado é `+0 Velocidade` e `+1 Chance Crítico`. O balanceamento
+deve ser avaliado pelos valores efetivos, não apenas pelos inteiros apresentados.

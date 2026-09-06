@@ -29,6 +29,32 @@ QualifiedItemId:
 | `stats.critMultiplier` | `CritMultiplier` | `3.0` |
 | raridade | `CustomFields["romulot.ValleyArmory/Rarity"]` | `Rare` |
 
+### Semântica vanilla confirmada em Stardew Valley 1.6.15
+
+`MeleeWeapon.ReloadData()` copia `WeaponData.Speed` e
+`WeaponData.CritChance` diretamente para os campos de runtime da arma. Portanto,
+o mapeamento da Miner's Blade não converte nem perde precisão nesses atributos.
+
+- Para espadas, a duração-base do golpe é calculada como
+  `(400 - Speed * 40 - farmer.addedSpeed * 40) * (1 - WeaponSpeedMultiplier)`
+  milissegundos. Assim, `Speed: 1` reduz a duração-base de 400 ms para 360 ms
+  antes de outros modificadores.
+- O tooltip vanilla exibe a velocidade de espadas como divisão inteira
+  `Speed / 2`. Por isso, o valor interno `1` aparece como `+0 Velocidade`, embora
+  já produza efeito no ataque.
+- Para espadas, `CritChance: 0.03` permanece uma chance-base de 3% no combate e
+  é então afetada pelo multiplicador de chance crítica dos buffs do jogador.
+- O tooltip calcula a unidade exibida como
+  `round((CritChance - 0.001) / 0.02)`. Logo, `0.03` aparece como
+  `+1 Chance Crítico`; esse número não é a porcentagem literal.
+- Adagas recebem tratamento vanilla adicional na chance crítica —
+  `(CritChance + 0.005) * 1.12` — tanto no combate quanto na apresentação. Isso
+  não se aplica à Miner's Blade.
+
+Essas fórmulas foram confirmadas por inspeção do IL do assembly instalado
+`Stardew Valley.dll`, versão de arquivo `1.6.15.24356`. Elas são comportamento
+interno do jogo e devem ser revalidadas ao atualizar a versão-alvo.
+
 Defaults explícitos desta prova:
 
 | WeaponData | Valor | Motivo |
@@ -115,8 +141,8 @@ Confirme no inventário:
 - descrição correspondente ao idioma ativo;
 - sprite temporário próprio, sem textura ausente;
 - dano `14–22`;
-- velocidade `+1`;
-- chance crítica coerente com `3%`;
+- velocidade exibida como `+0` (valor interno `1`, com efeito real de 40 ms);
+- chance crítica exibida como `+1` (valor interno `0.03`, isto é, 3% base);
 - defesa `+1`;
 - knockback perceptível e sem comportamento anormal;
 - arma utilizável como espada, com ataque normal.
