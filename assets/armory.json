@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 1,
+  "rarities": [
+    {
+      "id": "Common",
+      "displayNameKey": "rarity.common.name",
+      "nameColor": "#3F3F3F",
+      "lightEnabled": false,
+      "lightColor": "#FFFFFF",
+      "lightRadius": 0.0,
+      "lightIntensity": 0.0,
+      "lightOffset": { "x": 0.0, "y": -32.0 }
+    },
+    {
+      "id": "Rare",
+      "displayNameKey": "rarity.rare.name",
+      "nameColor": "#3B82F6",
+      "lightEnabled": true,
+      "lightColor": "#4A90E2",
+      "lightRadius": 1.25,
+      "lightIntensity": 0.35,
+      "lightOffset": { "x": 0.0, "y": -32.0 }
+    },
+    {
+      "id": "Epic",
+      "displayNameKey": "rarity.epic.name",
+      "nameColor": "#9B59B6",
+      "lightEnabled": true,
+      "lightColor": "#8E5AC7",
+      "lightRadius": 1.75,
+      "lightIntensity": 0.6,
+      "lightOffset": { "x": 0.0, "y": -32.0 }
+    },
+    {
+      "id": "Legendary",
+      "displayNameKey": "rarity.legendary.name",
+      "nameColor": "#D4A72C",
+      "lightEnabled": true,
+      "lightColor": "#F2C94C",
+      "lightRadius": 2.25,
+      "lightIntensity": 0.85,
+      "lightOffset": { "x": 0.0, "y": -32.0 }
+    }
+  ],
+  "equipment": [
+    {
+      "id": "romulot.ValleyArmory_MinersBlade",
+      "type": "sword",
+      "rarity": "Rare",
+      "displayNameKey": "equipment.miners-blade.name",
+      "descriptionKey": "equipment.miners-blade.description",
+      "stats": {
+        "minDamage": 14,
+        "maxDamage": 22,
+        "speed": 1,
+        "defense": 1,
+        "critChance": 0.03,
+        "critMultiplier": 3.0,
+        "knockback": 1.0,
+        "price": 900
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 0
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_BlackIronSword",
+      "type": "sword",
+      "rarity": "Common",
+      "displayNameKey": "equipment.black-iron-sword.name",
+      "descriptionKey": "equipment.black-iron-sword.description",
+      "stats": {
+        "minDamage": 20,
+        "maxDamage": 30,
+        "speed": -2,
+        "defense": 2,
+        "critChance": 0.02,
+        "critMultiplier": 3.0,
+        "knockback": 1.1,
+        "price": 1100
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 1
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_PrismaticBlade",
+      "type": "sword",
+      "rarity": "Legendary",
+      "displayNameKey": "equipment.prismatic-blade.name",
+      "descriptionKey": "equipment.prismatic-blade.description",
+      "stats": {
+        "minDamage": 55,
+        "maxDamage": 72,
+        "speed": 2,
+        "defense": 2,
+        "critChance": 0.04,
+        "critMultiplier": 3.2,
+        "knockback": 1.0,
+        "price": 6500
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 2
+      },
+      "optionalVisualOverrides": {
+        "light": {
+          "color": "#F2C94C",
+          "radius": 2.25,
+          "intensity": 0.85
+        }
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_ShadowFang",
+      "type": "dagger",
+      "rarity": "Rare",
+      "displayNameKey": "equipment.shadow-fang.name",
+      "descriptionKey": "equipment.shadow-fang.description",
+      "stats": {
+        "minDamage": 9,
+        "maxDamage": 15,
+        "speed": 4,
+        "defense": 0,
+        "critChance": 0.08,
+        "critMultiplier": 3.4,
+        "knockback": 0.7,
+        "price": 1000
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 3
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_MoonDagger",
+      "type": "dagger",
+      "rarity": "Epic",
+      "displayNameKey": "equipment.moon-dagger.name",
+      "descriptionKey": "equipment.moon-dagger.description",
+      "stats": {
+        "minDamage": 20,
+        "maxDamage": 28,
+        "speed": 5,
+        "defense": 0,
+        "critChance": 0.12,
+        "critMultiplier": 3.5,
+        "knockback": 0.65,
+        "price": 2800
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 4
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_Stonebreaker",
+      "type": "hammer",
+      "rarity": "Common",
+      "displayNameKey": "equipment.stonebreaker.name",
+      "descriptionKey": "equipment.stonebreaker.description",
+      "stats": {
+        "minDamage": 24,
+        "maxDamage": 38,
+        "speed": -5,
+        "defense": 2,
+        "critChance": 0.02,
+        "critMultiplier": 3.0,
+        "knockback": 1.5,
+        "price": 1200
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 5
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_AbyssHammer",
+      "type": "hammer",
+      "rarity": "Epic",
+      "displayNameKey": "equipment.abyss-hammer.name",
+      "descriptionKey": "equipment.abyss-hammer.description",
+      "stats": {
+        "minDamage": 48,
+        "maxDamage": 68,
+        "speed": -6,
+        "defense": 4,
+        "critChance": 0.025,
+        "critMultiplier": 3.1,
+        "knockback": 1.8,
+        "price": 4000
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Weapons",
+        "spriteIndex": 6
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_MinersBoots",
+      "type": "boots",
+      "rarity": "Common",
+      "displayNameKey": "equipment.miners-boots.name",
+      "descriptionKey": "equipment.miners-boots.description",
+      "stats": {
+        "defense": 1,
+        "immunity": 1,
+        "price": 400
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Boots",
+        "spriteIndex": 0
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_ObsidianBoots",
+      "type": "boots",
+      "rarity": "Rare",
+      "displayNameKey": "equipment.obsidian-boots.name",
+      "descriptionKey": "equipment.obsidian-boots.description",
+      "stats": {
+        "defense": 3,
+        "immunity": 1,
+        "price": 900
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Boots",
+        "spriteIndex": 1
+      }
+    },
+    {
+      "id": "romulot.ValleyArmory_EtherealBoots",
+      "type": "boots",
+      "rarity": "Epic",
+      "displayNameKey": "equipment.ethereal-boots.name",
+      "descriptionKey": "equipment.ethereal-boots.description",
+      "stats": {
+        "defense": 2,
+        "immunity": 5,
+        "price": 2200
+      },
+      "acquisition": { "method": "Unspecified" },
+      "sprite": {
+        "assetName": "romulot.ValleyArmory/Boots",
+        "spriteIndex": 2
+      }
+    }
+  ]
+}
