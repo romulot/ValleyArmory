@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net6.0": {
+      "Pathoschild.Stardew.ModBuildConfig": {
+        "type": "Direct",
+        "requested": "[4.2.0, )",
+        "resolved": "4.2.0",
+        "contentHash": "9ovQIsZsbtIAdgR2/SJJksnVZ4YQlvJ2VOTms+y9NBm9y5yu/fJ+GT+Loeuw9K2TIa6WAPFYaGw1pRFnLwAMvQ=="
+      }
+    }
+  }
+}

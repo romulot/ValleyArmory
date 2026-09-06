@@ -1,0 +1,22 @@
+# .NET build output
+bin/
+obj/
+
+# IDE and editor state
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Local Stardew Valley build configuration
+stardewvalley.targets
+
+# Runtime-generated local configuration and logs
+config.json
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
