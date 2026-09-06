@@ -22,5 +22,11 @@
   "equipment.obsidian-boots.name": "Botas de Obsidiana",
   "equipment.obsidian-boots.description": "Botas vulcânicas densas que oferecem proteção confiável.",
   "equipment.ethereal-boots.name": "Botas Etéreas",
-  "equipment.ethereal-boots.description": "Botas sobrenaturalmente leves e resistentes a efeitos hostis."
+  "equipment.ethereal-boots.description": "Botas sobrenaturalmente leves e resistentes a efeitos hostis.",
+  "command.va-give.description": "Entrega a Lâmina do Minerador para testes de desenvolvimento. Uso: va_give miners-blade",
+  "command.va-give.world-not-ready": "Carregue um save antes de usar este comando.",
+  "command.va-give.usage": "Uso: va_give miners-blade",
+  "command.va-give.creation-failed": "Não foi possível criar a Lâmina do Minerador. Consulte o log do SMAPI.",
+  "command.va-give.success": "Lâmina do Minerador adicionada ao inventário.",
+  "command.va-give.inventory-full": "Seu inventário está cheio. A Lâmina do Minerador foi deixada aos seus pés."
 }

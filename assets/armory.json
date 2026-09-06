@@ -61,7 +61,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 0
       }
     },
@@ -83,7 +83,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 1
       }
     },
@@ -105,7 +105,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 2
       },
       "optionalVisualOverrides": {
@@ -134,7 +134,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 3
       }
     },
@@ -156,7 +156,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 4
       }
     },
@@ -178,7 +178,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 5
       }
     },
@@ -200,7 +200,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Weapons",
+        "assetName": "Mods/romulot.ValleyArmory/Weapons",
         "spriteIndex": 6
       }
     },
@@ -217,7 +217,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Boots",
+        "assetName": "Mods/romulot.ValleyArmory/Boots",
         "spriteIndex": 0
       }
     },
@@ -234,7 +234,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Boots",
+        "assetName": "Mods/romulot.ValleyArmory/Boots",
         "spriteIndex": 1
       }
     },
@@ -251,7 +251,7 @@
       },
       "acquisition": { "method": "Unspecified" },
       "sprite": {
-        "assetName": "romulot.ValleyArmory/Boots",
+        "assetName": "Mods/romulot.ValleyArmory/Boots",
         "spriteIndex": 2
       }
     }

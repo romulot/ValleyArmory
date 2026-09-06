@@ -272,9 +272,9 @@ internal sealed class ArmoryCatalogValidator
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(sprite.AssetName) || !sprite.AssetName.StartsWith("romulot.ValleyArmory/", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(sprite.AssetName) || !sprite.AssetName.StartsWith("Mods/romulot.ValleyArmory/", StringComparison.Ordinal))
         {
-            errors.Add($"{field}.sprite.assetName: must use the 'romulot.ValleyArmory/' asset namespace.");
+            errors.Add($"{field}.sprite.assetName: must use the 'Mods/romulot.ValleyArmory/' asset namespace.");
         }
 
         if (sprite.SpriteIndex < 0)
