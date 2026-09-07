@@ -357,6 +357,11 @@ internal sealed class ArmoryCatalogValidator
         {
             this.ValidateDropAcquisition(acquisition.Drop, field, errors);
         }
+
+        if (acquisition.Crafting is not null)
+        {
+            this.ValidateCraftingAcquisition(acquisition.Crafting, field, errors);
+        }
     }
 
     private void ValidateShopAcquisition(EquipmentDefinition item, ShopAcquisition shop, string field, List<string> errors)
@@ -397,6 +402,39 @@ internal sealed class ArmoryCatalogValidator
         if (drop.Condition is not null && string.IsNullOrWhiteSpace(drop.Condition))
         {
             errors.Add($"{field}.acquisition.drop.condition: must not be blank when present.");
+        }
+    }
+
+    private void ValidateCraftingAcquisition(CraftingAcquisition crafting, string field, List<string> errors)
+    {
+        if (crafting.Ingredients is null || crafting.Ingredients.Count == 0)
+        {
+            errors.Add($"{field}.acquisition.crafting.ingredients: at least one ingredient is required.");
+        }
+        else
+        {
+            HashSet<string> seenIngredientIds = new(StringComparer.Ordinal);
+            foreach (CraftingIngredient ingredient in crafting.Ingredients)
+            {
+                if (string.IsNullOrWhiteSpace(ingredient.ItemId))
+                {
+                    errors.Add($"{field}.acquisition.crafting.ingredients: ingredient itemId is required.");
+                }
+                else if (!seenIngredientIds.Add(ingredient.ItemId))
+                {
+                    errors.Add($"{field}.acquisition.crafting.ingredients: duplicate ingredient itemId '{ingredient.ItemId}'.");
+                }
+
+                if (ingredient.Quantity <= 0)
+                {
+                    errors.Add($"{field}.acquisition.crafting.ingredients: ingredient '{ingredient.ItemId}' requires a quantity greater than zero.");
+                }
+            }
+        }
+
+        if (crafting.UnlockCondition is not null && string.IsNullOrWhiteSpace(crafting.UnlockCondition))
+        {
+            errors.Add($"{field}.acquisition.crafting.unlockCondition: must not be blank when present.");
         }
     }
 

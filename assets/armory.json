@@ -66,6 +66,14 @@
         "shop": {
           "shopId": "AdventureShop",
           "condition": "MINE_LOWEST_LEVEL_REACHED 40"
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "335", "quantity": 8 },
+            { "itemId": "382", "quantity": 15 },
+            { "itemId": "334", "quantity": 5 }
+          ],
+          "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 40"
         }
       },
       "sprite": {
@@ -96,6 +104,13 @@
         "shop": {
           "shopId": "AdventureShop",
           "condition": "MINE_LOWEST_LEVEL_REACHED 10"
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "335", "quantity": 5 },
+            { "itemId": "382", "quantity": 10 },
+            { "itemId": "334", "quantity": 3 }
+          ]
         }
       },
       "sprite": {
@@ -232,6 +247,13 @@
         "shop": {
           "shopId": "AdventureShop",
           "condition": "MINE_LOWEST_LEVEL_REACHED 10"
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "343", "quantity": 50 },
+            { "itemId": "382", "quantity": 10 },
+            { "itemId": "334", "quantity": 3 }
+          ]
         }
       },
       "sprite": {
@@ -295,6 +317,12 @@
           "sourceType": "Monster",
           "sourceId": "Green Slime",
           "chance": 0.06
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "334", "quantity": 3 },
+            { "itemId": "382", "quantity": 5 }
+          ]
         }
       },
       "sprite": {
@@ -323,6 +351,13 @@
           "sourceType": "Monster",
           "sourceId": "Lava Crab",
           "chance": 0.05
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "848", "quantity": 5 },
+            { "itemId": "337", "quantity": 2 }
+          ],
+          "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 40"
         }
       },
       "sprite": {
@@ -352,6 +387,14 @@
           "sourceId": "Carbon Ghost",
           "chance": 0.015,
           "condition": "MINE_LOWEST_LEVEL_REACHED 80"
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "768", "quantity": 10 },
+            { "itemId": "769", "quantity": 10 },
+            { "itemId": "337", "quantity": 3 }
+          ],
+          "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 80"
         }
       },
       "sprite": {
@@ -374,6 +417,12 @@
         "shop": {
           "shopId": "AdventureShop",
           "condition": "MINE_LOWEST_LEVEL_REACHED 10"
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "335", "quantity": 3 },
+            { "itemId": "334", "quantity": 3 }
+          ]
         }
       },
       "sprite": {
@@ -400,6 +449,13 @@
           "sourceType": "Monster",
           "sourceId": "Hot Head",
           "chance": 0.04
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "848", "quantity": 8 },
+            { "itemId": "337", "quantity": 1 }
+          ],
+          "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 40"
         }
       },
       "sprite": {
@@ -427,6 +483,14 @@
           "sourceId": "Putrid Ghost",
           "chance": 0.015,
           "condition": "MINE_LOWEST_LEVEL_REACHED 80"
+        },
+        "crafting": {
+          "ingredients": [
+            { "itemId": "768", "quantity": 8 },
+            { "itemId": "769", "quantity": 8 },
+            { "itemId": "910", "quantity": 2 }
+          ],
+          "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 80"
         }
       },
       "sprite": {

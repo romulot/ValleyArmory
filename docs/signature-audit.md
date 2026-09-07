@@ -610,6 +610,30 @@ Disassembly de `Ghost.getExtraDropItems()` (um dos 5 overrides vanilla) mostra `
 
 Assinatura real confirmada: `GameStateQuery.CheckConditions(string query, GameLocation location, Farmer player, Item targetItem, Item inputItem, Random random, HashSet<string> ignoreQueryKeys)`. O Valley Armory reaproveita a mesma condição `MINE_LOWEST_LEVEL_REACHED` já usada na Fase 7A para a loja, chamando essa API diretamente (já que, ao contrário do Shop, o drop não é avaliado nativamente pelo motor — é o próprio código do mod que decide se o item cai).
 
+## Crafting — Fase 7C (reauditoria)
+
+Auditoria feita por reflexão + disassembly manual de IL sobre `Stardew Valley.dll` `1.6.15.24356`, com foco no ponto crítico: se o crafting vanilla aceita produzir diretamente um Weapon/Boots/Shirt custom.
+
+### `Data/CraftingRecipes` continua no formato legado
+
+Igual a `Data/Monsters`, `Data/CraftingRecipes` **não foi migrado** para tipo forte em 1.6: continua `Dictionary<string,string>` (confirmado carregando o asset real, 150 receitas). Formato real confirmado por disassembly de `CraftingRecipe..ctor(string,bool)` (não por memória): `"ingredienteId quantidade [...]/categoria/outputId quantidade/bigCraftable/unlockFlag/"`. O campo de output também aceita múltiplos pares `id quantidade` (mecânica de "escolha aleatória entre resultados", usada por poucas receitas vanilla); o Valley Armory usa sempre um único par.
+
+### Ponto crítico resolvido: `ItemRegistry.Create` aceita Qualified Item ID no output
+
+Disassembly de `CraftingRecipe.createItem()` confirma: o método obtém o `QualifiedItemId` via `GetItemData(false)` e chama `ItemRegistry.Create(qualifiedItemId, numberProducedPerCraft, 0, 0)` **diretamente com essa string**. `GetItemData` por sua vez, quando a receita não é `bigCraftable`, chama `ItemRegistry.GetDataOrErrorItem(id)` **sem qualificar/prefixar** o id armazenado — ou seja, se o campo de output já contém um Qualified Item ID completo (`(W)...`, `(B)...`, `(S)...`), a resolução funciona exatamente como em qualquer outro ponto do jogo que use `ItemRegistry`. **Não foi necessário Harmony para o output** — vanilla já suporta produzir qualquer item registrado via `ItemRegistry`, incluindo os equipamentos custom do Valley Armory.
+
+### Unlock de receita: `Farmer.craftingRecipes` é por-jogador
+
+`Farmer.craftingRecipes` é um `NetStringDictionary<int, NetInt>` — estado de rede **por Farmer**, não do save inteiro. Cada farmhand pode conhecer receitas diferentes. `Farmer.LearnDefaultRecipes()` (chamado na criação do personagem) lê o índice 4 do registro bruto de `Data/CraftingRecipes` e, se for literalmente a string `"default"`, adiciona a receita ao dicionário do farmer — mas isso só executa uma vez, na criação do personagem, não ajuda saves já existentes.
+
+### Mecanismo de unlock declarativo usado: `Data/TriggerActions` + `MarkCraftingRecipeKnown`
+
+Confirmado tipo real `StardewValley.GameData.TriggerActionData` (asset `Data/TriggerActions`, uma **List**, não um Dictionary) com campos `Id`, `Trigger`, `Condition` (GSQ), `SkipPermanentlyCondition`, `HostOnly` (bool), `Action`. Existe uma ação padrão registrada `MarkCraftingRecipeKnown` (`TriggerActionManager.DefaultActions.MarkCraftingRecipeKnown`), com assinatura de argumentos `[ação, PlayerActionTarget, recipeKey, learned?]`, confirmada via disassembly chamando `Farmer.team.RequestSetSimpleFlag` (mecanismo de rede já existente, correto para multiplayer). `PlayerActionTarget` é um enum real com membros `Current | Host | All` (confirmado por reflexão). As 31 entradas vanilla de `Data/TriggerActions` inspecionadas têm todas `HostOnly=False` — ou seja, cada cliente avalia o trigger para o seu próprio jogador local, exatamente o comportamento desejado ("cada player pode conhecer receitas diferentes"). O Valley Armory usa `Trigger="DayStarted"` (valor real confirmado em uso vanilla) + `Condition` opcional (reaproveitando `MINE_LOWEST_LEVEL_REACHED`, já auditado na Fase 7A) + `Action="MarkCraftingRecipeKnown Current <recipeId>"`. Nenhum Harmony, nenhum `UpdateTicked`, nenhuma checagem manual de `IsMainPlayer` foi necessária — o mecanismo já resolve autoridade e idempotência (repetir a ação com a receita já conhecida é inofensivo).
+
+### Ingredientes
+
+Ingredientes usam IDs de objeto simples (sem qualificador), exatamente como no vanilla (`334`=Copper Bar, `335`=Iron Bar, `382`=Coal, `343`=Stone, `337`=Iridium Bar, `848`=Cinder Shard, `768`=Solar Essence, `769`=Void Essence, `910`=Radioactive Bar — todos confirmados via `Data/Objects` real, não memória).
+
 ## Limitações
 
 - A auditoria foi estática; o jogo não foi iniciado.
@@ -618,3 +642,4 @@ Assinatura real confirmada: `GameStateQuery.CheckConditions(string query, GameLo
 - A ordem entre patches Harmony de outros mods não pode ser garantida sem uma matriz concreta de compatibilidade.
 - Os métodos e campos confirmados são APIs públicas em termos de visibilidade CLR, mas pertencem ao código do jogo, não a uma garantia de estabilidade do SMAPI.
 - A autoridade de multiplayer para `getExtraDropItems()` foi confirmada via análise estática da cadeia de chamadas (IL), não observada em uma sessão multiplayer real.
+- A autoridade por-jogador de `Data/TriggerActions`/`MarkCraftingRecipeKnown` foi confirmada por `HostOnly=False` nas entradas vanilla e pela assinatura de `RequestSetSimpleFlag`, não observada em uma sessão multiplayer real.

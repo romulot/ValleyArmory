@@ -795,6 +795,123 @@ pode ser coletado, mantém tooltip/raridade/iluminação corretos; confirmar
 que a loja continua funcionando em paralelo; multiplayer/split-screen não
 testado manualmente (autoridade confirmada apenas por análise estática).
 
-Próximo passo sugerido: **Fase 7C** (crafting, quests ou recompensas —
-fontes já previstas em `DropAcquisition`/`ShopAcquisition` mas sem
-implementação).
+Próximo passo sugerido logo após a Fase 7B: crafting (concluído como
+**Fase 7C**, ver abaixo). Quest e Reward seguem em aberto.
+
+## Fase 7C — aquisição via crafting
+
+### Decisão técnica
+
+`Data/CraftingRecipes` continua no formato legado (`Dictionary<string,string>`,
+registro posicional). O ponto crítico da fase — se o crafting vanilla aceita
+produzir diretamente um Weapon/Boots/Shirt custom — foi confirmado por
+disassembly de `CraftingRecipe.createItem()`/`GetItemData()`: o output é
+resolvido via `ItemRegistry.Create(qualifiedItemId, ...)` usando o próprio
+Qualified Item ID armazenado no campo de output, sem qualificação adicional
+para receitas não-`bigCraftable`. **Nenhum Harmony foi necessário para o
+output** — bastou usar `EquipmentIdentity.GetQualifiedItemId` (a mesma
+resolução centralizada já usada por Shop/Drop) como o valor desse campo.
+Detalhes completos em `docs/signature-audit.md` (seção "Crafting — Fase
+7C").
+
+Para o **unlock** da receita, `Farmer.craftingRecipes` é estado por-jogador,
+e o único mecanismo data-driven confirmado que funciona tanto para
+personagens novos quanto para saves existentes é `Data/TriggerActions` (uma
+`List<TriggerActionData>`, não dicionário) com a ação padrão vanilla
+`MarkCraftingRecipeKnown`. Isso substitui completamente qualquer
+polling/`UpdateTicked` — o gatilho `DayStarted` roda uma vez por dia por
+cliente, e a autoridade por-jogador já é resolvida pelo próprio mecanismo
+(`HostOnly=False`, confirmado nas 31 entradas vanilla existentes).
+
+### Pipeline
+
+```
+EquipmentDefinition.Acquisition.Crafting (Ingredients[], UnlockCondition?)
+        ↓
+CraftingRecipeInjector.BuildRecipeString      CraftingUnlockInjector.BuildTriggerAction
+        ↓                                             ↓
+Data/CraftingRecipes                          Data/TriggerActions
+"ing1 qty1 ing2 qty2/Home/                    { Id, Trigger="DayStarted",
+ (X)equipmentId 1/false/default/"                Condition=UnlockCondition,
+        ↓                                        Action="MarkCraftingRecipeKnown Current <id>" }
+Crafting Menu (vanilla)                                ↓
+        ↓                                     Farmer.craftingRecipes (per-player)
+createItem() → ItemRegistry.Create(qualifiedId)
+```
+
+Ambos injetores seguem o mesmo padrão aditivo/isolamento de falha dos
+injetores de Shop/Drop (`NonOverwritingAssetEditor.TryAdd` para o
+dicionário de receitas; checagem de `Id` já existente para a lista de
+trigger actions), com `try/catch` por definição para não derrubar as
+demais.
+
+### Recipes configuradas
+
+| Equipamento | Raridade | Ingredientes | Unlock | Outros métodos |
+|---|---|---|---|---|
+| Black Iron Sword | Common | Iron Bar x5, Coal x10, Copper Bar x3 | — (sempre disponível) | Shop |
+| Stonebreaker | Common | Stone x50, Coal x10, Copper Bar x3 | — | Shop |
+| Miner's Boots | Common | Copper Bar x3, Coal x5 | — | Shop + Drop |
+| Miner's Armor | Common | Iron Bar x3, Copper Bar x3 | — | Shop |
+| Miner's Blade | Rare | Iron Bar x8, Coal x15, Copper Bar x5 | MINE_LOWEST_LEVEL_REACHED 40 | Shop |
+| Obsidian Boots | Rare | Cinder Shard x5, Iridium Bar x2 | MINE_LOWEST_LEVEL_REACHED 40 | Shop + Drop |
+| Obsidian Armor | Rare | Cinder Shard x8, Iridium Bar x1 | MINE_LOWEST_LEVEL_REACHED 40 | Shop + Drop |
+| Ethereal Boots | Epic | Solar Essence x10, Void Essence x10, Iridium Bar x3 | MINE_LOWEST_LEVEL_REACHED 80 | Shop + Drop |
+| Ethereal Armor | Epic | Solar Essence x8, Void Essence x8, Radioactive Bar x2 | MINE_LOWEST_LEVEL_REACHED 80 | Shop + Drop |
+
+Ingredientes escolhidos por tema/progressão, não por fórmula: o conjunto
+Miner's usa metais iniciais (Cobre/Ferro/Carvão); Obsidian usa Cinder
+Shard/Iridium Bar (tema vulcânico, ecoa o Drop já configurado em Hot
+Head/Lava Crab); Ethereal usa Solar/Void Essence (tema etéreo/fantasma,
+ecoa o Drop em Carbon/Putrid Ghost) com um terceiro ingrediente distinto
+entre Boots (Iridium Bar) e Armor (Radioactive Bar) para evitar receitas
+idênticas dentro do mesmo conjunto.
+
+### Equipamentos sem Crafting
+
+Shadow Fang, Moon Dagger e Abyss Hammer permanecem só Shop+Drop — são os
+itens mais "ligados a loot temático" do catálogo (Shadow Brute, Skeleton
+Mage, Iridium Golem já configurados na Fase 7B), então crafting seria
+redundante com a identidade já estabelecida. **Prismatic Blade** continua
+sem Shop, sem Drop e agora também sem Crafting — nenhuma receita com
+materiais caros foi criada só para preencher a tabela; ela permanece
+reservada para uma futura fase de Quest/Reward.
+
+### Shop + Drop + Crafting
+
+Miner's Boots, Obsidian Boots, Obsidian Armor, Ethereal Boots e Ethereal
+Armor têm as **três** formas de aquisição simultaneamente. Black Iron
+Sword, Stonebreaker, Miner's Armor e Miner's Blade têm Shop + Crafting
+(sem Drop). Nenhum método existente foi removido ao adicionar Crafting.
+
+### Testes
+
+`CraftingPipelineTests.cs` (novo, 21 testes): validação de definição
+(ingredientes vazios, quantidade zero, itemId em branco, itemId duplicado,
+unlockCondition em branco, ausência de Crafting permitida), catálogo (9 de
+13 configurados, Prismatic Blade sem nenhuma aquisição, pelo menos um item
+com Shop+Crafting sem Drop e pelo menos um com Shop+Drop+Crafting),
+pipeline (`CraftingRecipeInjector.BuildRecipeString` produz o formato real
+`ingredientes/Home/outputQualificado 1/false/default/` para arma/bota/
+armadura, saída sempre quantidade 1, rejeita equipamento sem dados de
+crafting), compatibilidade (`ApplyTo` preserva receita vanilla existente,
+isola colisão sem bloquear as demais), unlock (`BuildTriggerAction` usa
+`Trigger=DayStarted` e `Action=MarkCraftingRecipeKnown Current <id>`,
+condição nula quando não configurada, `ApplyTo` sobre `Data/TriggerActions`
+preserva entradas vanilla e é idempotente em chamadas repetidas — simulando
+reinvalidação do asset sem duplicar trigger).
+
+### Validação manual pendente (a executar após esta fase)
+
+Abrir o menu de crafting em diferentes estágios de progresso e confirmar
+que as receitas Common aparecem desde o primeiro dia e as Rare/Epic só após
+a condição de mina correspondente; craftar pelo menos uma arma, uma bota e
+uma armadura e confirmar consumo de ingredientes e item produzido
+corretos; equipar, salvar e recarregar para confirmar que a receita
+continua conhecida; confirmar que Shop e Drop continuam funcionando sem
+regressão; multiplayer/split-screen (receita conhecida por jogador
+diferente) não testado manualmente.
+
+Próximo passo sugerido: **Fase 7D** (Quest ou Reward — únicas fontes de
+`AcquisitionMetadata` ainda sem implementação real; Prismatic Blade é a
+candidata natural).

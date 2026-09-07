@@ -44,6 +44,12 @@ internal sealed class ModEntry : Mod
         ShopAcquisitionInjector shopAcquisitionInjector = new(catalogIndex, this.Monitor);
         helper.Events.Content.AssetRequested += shopAcquisitionInjector.OnAssetRequested;
 
+        CraftingRecipeInjector craftingRecipeInjector = new(catalogIndex, this.Monitor);
+        helper.Events.Content.AssetRequested += craftingRecipeInjector.OnAssetRequested;
+
+        CraftingUnlockInjector craftingUnlockInjector = new(catalogIndex, this.Monitor);
+        helper.Events.Content.AssetRequested += craftingUnlockInjector.OnAssetRequested;
+
         new ArmoryGiveCommand(catalogIndex, helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
 
         _ = new DropPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(new DropRuleResolver(catalogIndex));

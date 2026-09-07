@@ -86,6 +86,8 @@ internal sealed class AcquisitionMetadata
     public ShopAcquisition? Shop { get; init; }
 
     public DropAcquisition? Drop { get; init; }
+
+    public CraftingAcquisition? Crafting { get; init; }
 }
 
 internal sealed class ShopAcquisition
@@ -110,6 +112,20 @@ internal sealed class DropAcquisition
 internal enum DropSourceType
 {
     Monster
+}
+
+internal sealed class CraftingAcquisition
+{
+    public IReadOnlyList<CraftingIngredient> Ingredients { get; init; } = Array.Empty<CraftingIngredient>();
+
+    public string? UnlockCondition { get; init; }
+}
+
+internal sealed class CraftingIngredient
+{
+    public string ItemId { get; init; } = string.Empty;
+
+    public int Quantity { get; init; }
 }
 
 internal sealed class SpriteReference
