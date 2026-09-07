@@ -165,6 +165,17 @@ internal sealed class ArmoryCatalogValidator
                 errors.Add($"{field}.weaponBehavior: weapons require a weapon behavior.");
             }
 
+            if (item.Type is EquipmentType.Boots && item.ColorIndex is null or < 0 or > 18)
+            {
+                errors.Add($"{field}.colorIndex: boots require a value between 0 and 18 (vanilla shoe color palette).");
+            }
+
+            if (item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer
+                && item.ColorIndex is not null)
+            {
+                errors.Add($"{field}.colorIndex: weapons cannot define a boots color index.");
+            }
+
             if (!rarityIds.Contains(item.Rarity))
             {
                 errors.Add($"{field}.rarity: unknown rarity '{item.Rarity}'.");

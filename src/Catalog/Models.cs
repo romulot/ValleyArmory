@@ -33,6 +33,8 @@ internal sealed class EquipmentDefinition
     public SpriteReference? Sprite { get; init; }
 
     public OptionalVisualOverrides? OptionalVisualOverrides { get; init; }
+
+    public int? ColorIndex { get; init; }
 }
 
 internal enum EquipmentType

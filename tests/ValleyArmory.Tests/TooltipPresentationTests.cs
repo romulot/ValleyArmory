@@ -16,11 +16,14 @@ public sealed class TooltipPresentationTests
         yield return new object[] { "(W)romulot.ValleyArmory_MoonDagger", "Epic", "Rarity: Epic" };
         yield return new object[] { "(W)romulot.ValleyArmory_Stonebreaker", "Common", "Rarity: Common" };
         yield return new object[] { "(W)romulot.ValleyArmory_AbyssHammer", "Epic", "Rarity: Epic" };
+        yield return new object[] { "(B)romulot.ValleyArmory_MinersBoots", "Common", "Rarity: Common" };
+        yield return new object[] { "(B)romulot.ValleyArmory_ObsidianBoots", "Rare", "Rarity: Rare" };
+        yield return new object[] { "(B)romulot.ValleyArmory_EtherealBoots", "Epic", "Rarity: Epic" };
     }
 
     [Theory]
     [MemberData(nameof(WeaponRarityCases))]
-    public void AllValleyArmoryWeaponsResolvePresentationFromCatalog(string qualifiedItemId, string rarityId, string rarityText)
+    public void AllValleyArmoryEquipmentResolvesPresentationFromCatalog(string qualifiedItemId, string rarityId, string rarityText)
     {
         bool found = CreateResolver().TryResolve(qualifiedItemId, key => key == $"tooltip.rarity.{rarityId.ToLowerInvariant()}" ? rarityText : key, out TooltipPresentation? presentation);
 
@@ -56,15 +59,40 @@ public sealed class TooltipPresentationTests
 
     [Theory]
     [InlineData("(W)0")]
-    [InlineData("(B)romulot.ValleyArmory_MinersBoots")]
+    [InlineData("(B)0")]
     [InlineData("(W)other.mod_Sword")]
+    [InlineData("(B)other.mod_Boots")]
     [InlineData(null)]
-    public void ExternalUnknownAndBootItemsRemainVanilla(string? qualifiedItemId)
+    public void ExternalAndUnknownItemsRemainVanilla(string? qualifiedItemId)
     {
         bool found = CreateResolver().TryResolve(qualifiedItemId, key => key, out TooltipPresentation? presentation);
 
         Assert.False(found);
         Assert.Null(presentation);
+    }
+
+    [Fact]
+    public void RareBootsShareTheSameCatalogColorAsRareWeapons()
+    {
+        TooltipPresentationResolver resolver = CreateResolver();
+        resolver.TryResolve("(W)romulot.ValleyArmory_MinersBlade", key => key, out TooltipPresentation? minersBlade);
+        resolver.TryResolve("(B)romulot.ValleyArmory_ObsidianBoots", key => key, out TooltipPresentation? obsidianBoots);
+
+        Assert.Equal(minersBlade!.NameColor, obsidianBoots!.NameColor);
+    }
+
+    [Fact]
+    public void CommonBootsKeepVanillaTitleColorButShowRarityLine()
+    {
+        bool found = CreateResolver().TryResolve(
+            "(B)romulot.ValleyArmory_MinersBoots",
+            key => "Rarity: Common",
+            out TooltipPresentation? presentation
+        );
+
+        Assert.True(found);
+        Assert.Null(presentation!.NameColor);
+        Assert.Equal("Rarity: Common", presentation.RarityText);
     }
 
     [Fact]

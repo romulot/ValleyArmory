@@ -34,13 +34,24 @@ public sealed class LightingTests
     [Theory]
     [InlineData("(W)romulot.ValleyArmory_BlackIronSword")]
     [InlineData("(W)romulot.ValleyArmory_Stonebreaker")]
-    [InlineData("(B)romulot.ValleyArmory_MinersBoots")]
     [InlineData("(W)0")]
     [InlineData("(W)other.mod_Sword")]
     [InlineData(null)]
-    public void CommonBootUnknownAndExternalItemsHaveNoLight(string? qualifiedItemId)
+    public void CommonWeaponUnknownAndExternalItemsHaveNoLight(string? qualifiedItemId)
     {
         Assert.False(CreateResolver().TryResolve(qualifiedItemId, out _));
+    }
+
+    [Theory]
+    [InlineData("(B)romulot.ValleyArmory_MinersBoots")]
+    [InlineData("(B)romulot.ValleyArmory_ObsidianBoots")]
+    [InlineData("(B)romulot.ValleyArmory_EtherealBoots")]
+    public void NoBootEverResolvesLightRegardlessOfRarity(string qualifiedItemId)
+    {
+        bool found = CreateResolver().TryResolve(qualifiedItemId, out WeaponLightAppearance appearance);
+
+        Assert.False(found);
+        Assert.Equal(default, appearance);
     }
 
     [Fact]

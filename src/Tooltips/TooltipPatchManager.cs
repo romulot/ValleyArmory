@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
+using StardewValley.Objects;
 using StardewValley.Tools;
 using System.Text;
 
@@ -35,10 +36,18 @@ internal sealed class TooltipPatchManager
             MethodInfo draw = AccessTools.Method(typeof(MeleeWeapon), nameof(MeleeWeapon.drawTooltip),
                 new[] { typeof(SpriteBatch), typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(SpriteFont), typeof(float), typeof(StringBuilder) })
                 ?? throw new MissingMethodException("MeleeWeapon.drawTooltip was not found.");
+            MethodInfo bootsMeasure = AccessTools.Method(typeof(Boots), nameof(Boots.getExtraSpaceNeededForTooltipSpecialIcons),
+                new[] { typeof(SpriteFont), typeof(int), typeof(int), typeof(int), typeof(StringBuilder), typeof(string), typeof(int) })
+                ?? throw new MissingMethodException("Boots.getExtraSpaceNeededForTooltipSpecialIcons was not found.");
+            MethodInfo bootsDraw = AccessTools.Method(typeof(Boots), nameof(Boots.drawTooltip),
+                new[] { typeof(SpriteBatch), typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(SpriteFont), typeof(float), typeof(StringBuilder) })
+                ?? throw new MissingMethodException("Boots.drawTooltip was not found.");
 
             LogTargetMethod("title-color", hoverText);
             LogTargetMethod("extra-space", measure);
             LogTargetMethod("draw-tooltip", draw);
+            LogTargetMethod("boots-extra-space", bootsMeasure);
+            LogTargetMethod("boots-draw-tooltip", bootsDraw);
 
             ApplyPatch("title-color", () => this.harmony.Patch(
                 hoverText,
@@ -52,11 +61,21 @@ internal sealed class TooltipPatchManager
                 draw,
                 prefix: new HarmonyMethod(typeof(MeleeWeaponTooltipPatches), nameof(MeleeWeaponTooltipPatches.DrawPrefix))));
 
+            ApplyPatch("boots-extra-space", () => this.harmony.Patch(
+                bootsMeasure,
+                postfix: new HarmonyMethod(typeof(BootsTooltipPatches), nameof(BootsTooltipPatches.MeasurePostfix))));
+
+            ApplyPatch("boots-draw-tooltip", () => this.harmony.Patch(
+                bootsDraw,
+                prefix: new HarmonyMethod(typeof(BootsTooltipPatches), nameof(BootsTooltipPatches.DrawPrefix))));
+
             TooltipPatchContext.Trace("Tooltip decoration manager enabled");
             LogPatchOwners("IClickableMenu.drawHoverText(StringBuilder,...)", hoverText);
             LogPatchOwners("MeleeWeapon.getExtraSpaceNeededForTooltipSpecialIcons", measure);
             LogPatchOwners("MeleeWeapon.drawTooltip", draw);
-            this.monitor.Log("Weapon tooltip rarity decoration enabled.", LogLevel.Debug);
+            LogPatchOwners("Boots.getExtraSpaceNeededForTooltipSpecialIcons", bootsMeasure);
+            LogPatchOwners("Boots.drawTooltip", bootsDraw);
+            this.monitor.Log("Weapon and boots tooltip rarity decoration enabled.", LogLevel.Debug);
             return true;
         }
         catch (Exception exception)

@@ -117,8 +117,9 @@ protected string[] BootsDataDefinition.GetRawData(string itemId);
 ```
 
 Os dados extraídos de `Content/Data/Boots.xnb` na instalação alvo contêm 18
-entradas e cada valor bruto possui **sete campos** separados por `/`. A ordem
-real observada é:
+entradas vanilla e cada valor bruto possui **sete campos** separados por `/`.
+A ordem real observada (confirmada carregando o asset real via
+`ContentManager.Load<Dictionary<string,string>>("Data/Boots")`) é:
 
 ```text
 0 Name
@@ -130,15 +131,64 @@ real observada é:
 6 DisplayName
 ```
 
-`ColorTexture`, `SpriteIndex` e `Texture` não aparecem no registro bruto; são
-resolvidos por `BootsDataDefinition` e pelo contrato vanilla de textura. A
-auditoria anterior que descrevia dez campos estava incorreta para esta versão e
-foi substituída por este formato de sete campos.
+### Extensão de 10 campos (Fase 6B — reauditoria)
 
-Consequência: o futuro `BootDataFactory` deve gerar exatamente sete campos para
-este assembly e rejeitar `/` em valores não escapáveis. O `Price` configurado
-para botas não deve ser apresentado como preço efetivo sem confirmar a fórmula
-no teste integrado.
+A auditoria original da Fase 0 parou nos sete campos vanilla e concluiu que
+`SpriteIndex`/`Texture` não são configuráveis por item. Isso estava
+**incompleto**. Desmontando o IL de
+`StardewValley.ItemTypeDefinitions.BootsDataDefinition.GetData`/`GetSpriteIndex`/`GetSourceRect`
+e de `StardewValley.Objects.Boots.reloadData`/`GetBootsColorString` no assembly
+`1.6.15.24356` (via `System.Reflection.Emit.OpCodes`, sem decompilador),
+confirma-se que o array de campos aceita até **10 posições**, sendo as três
+últimas uma extensão não documentada:
+
+```text
+7 Custom color-sheet texture name (opcional)
+8 Custom SpriteIndex (opcional, inteiro)
+9 Custom icon texture name (opcional)
+```
+
+Comportamento exato observado no IL:
+
+- `GetSpriteIndex(id, fields)`: retorna `fields[8]` se presente (`GetInt` com
+  default `-1`); senão tenta `int.Parse(id)`; senão `-1`. Isso explica por que
+  os 18 itens vanilla (IDs numéricos legados) nunca precisam do campo 8: seu
+  próprio ID já é o índice.
+- `GetData(id)`: usa `fields[9]` como nome da textura do ícone, com fallback
+  literal para `"Maps\springobjects"` (a sheet compartilhada onde os itens
+  vanilla vivem, indexados pelo próprio ID numérico). Repare que o fallback já
+  usa **barra invertida**, não `/`.
+- `Boots.reloadData()`: `indexInTileSheet` (usado por `GetSourceRect`) vem de
+  `ParsedItemData.SpriteIndex` (ou seja, do resultado de `GetSpriteIndex`
+  acima); `Defense`/`Immunity`/`Price`/`ColorIndex` continuam vindo dos campos
+  2-5, sem mudança.
+- `Boots.GetBootsColorString()`: se `fields[7]` existir e não for vazio,
+  retorna `"<fields[7]>:<indexInColorSheet>"` (textura de recolor customizada
+  usada por `Farmer.changeShoeColor`); caso contrário retorna apenas o índice
+  numérico, isto é, a paleta vanilla `Characters/Farmer/shoeColors.xnb`
+  (confirmada como uma imagem-paleta pequena — 481 bytes descomprimidos no
+  total incluindo cabeçalho —, não uma máscara de recolor do tamanho do
+  spritesheet do farmer).
+- `GetSourceRect`: `getSourceRectForStandardTileSheet(texture, spriteIndex, 16, 16)` — confirma células de **16×16px**, igual ao padrão já usado em `assets/weapons.png`.
+
+**Restrição crítica descoberta**: o valor bruto inteiro é dividido por `/` pelo
+próprio jogo (`raw.Split('/')`) antes de qualquer campo ser lido. Isso significa
+que o campo 9 (nome da textura) **não pode conter `/`**, mesmo sendo
+convencionalmente um caminho de asset (`Mods/Autor/Nome`). A solução, que é
+exatamente o que o próprio fallback vanilla faz, é usar `\` no lugar de `/`
+nesse campo — o SMAPI normaliza `/` e `\` como equivalentes na resolução de
+nomes de asset, então isso não quebra `AssetRequestedEventArgs`/`LoadFromModFile`.
+
+Consequência para a implementação: `BootDataFactory` gera os 10 campos
+(mantendo os 7 vanilla intactos), usa o campo 8 para o `SpriteIndex` próprio e
+o campo 9 (com `\` no lugar de `/`) para apontar para
+`Mods/romulot.ValleyArmory/Boots`, evitando depender de IDs numéricos legados
+ou de estender `Maps/springobjects.png`. O campo 7 (textura de recolor customizada)
+foi deixado vazio nesta fase — ver limitação registrada em `docs/vertical-slice.md`.
+
+A auditoria original que descrevia "dez campos" antes da Fase 2 estava, na
+verdade, parcialmente correta — só não sabia dizer o que os 3 campos extras
+significavam. Este documento substitui essa lacuna.
 
 ### ItemRegistry
 

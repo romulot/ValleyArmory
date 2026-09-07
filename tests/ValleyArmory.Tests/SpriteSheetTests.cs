@@ -54,6 +54,66 @@ public sealed class SpriteSheetTests
         Assert.All(weapons, weapon => Assert.Equal(AssetInjector.WeaponTextureAssetName, weapon.Sprite!.AssetName));
     }
 
+    [Fact]
+    public void BootsSpritesheetHasThreeOccupiedSixteenPixelCellsWithTransparentMargins()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "boots.png");
+        PngImage image = ReadRgbaPng(path);
+
+        Assert.Equal(48, image.Width);
+        Assert.Equal(16, image.Height);
+        Assert.Equal(3, image.Width / 16);
+
+        for (int cell = 0; cell < 3; cell++)
+        {
+            bool occupied = false;
+            bool hasTransparentPixel = false;
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    if (image.Alpha[y, cell * 16 + x] != 0)
+                        occupied = true;
+                    else
+                        hasTransparentPixel = true;
+                }
+            }
+
+            Assert.True(occupied, $"Boot sprite cell {cell} is empty.");
+            Assert.True(hasTransparentPixel, $"Boot sprite cell {cell} has no transparent background pixels.");
+        }
+    }
+
+    [Fact]
+    public void BootsSpriteCellsDoNotLeakIntoEachOtherAndStayOpaqueOrFullyTransparent()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "boots.png");
+        PngImage image = ReadRgbaPng(path);
+
+        for (int y = 0; y < image.Height; y++)
+        {
+            for (int x = 0; x < image.Width; x++)
+            {
+                byte alpha = image.Alpha[y, x];
+                Assert.True(alpha == 0 || alpha == 255, $"Pixel ({x},{y}) has partial alpha {alpha}, which indicates anti-aliasing.");
+            }
+        }
+    }
+
+    [Fact]
+    public void BootDefinitionsUseUniqueIndicesZeroThroughTwoAndSharedTexture()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "armory.json");
+        ArmoryCatalog catalog = new ArmoryCatalogLoader(new ArmoryCatalogValidator()).Load(path);
+        EquipmentDefinition[] boots = catalog.Equipment
+            .Where(item => item.Type is EquipmentType.Boots)
+            .ToArray();
+
+        Assert.Equal(3, boots.Length);
+        Assert.Equal(Enumerable.Range(0, 3), boots.Select(item => item.Sprite!.SpriteIndex).OrderBy(index => index));
+        Assert.All(boots, boot => Assert.Equal(BootAssetInjector.BootTextureAssetName, boot.Sprite!.AssetName));
+    }
+
     private static PngImage ReadRgbaPng(string path)
     {
         byte[] bytes = File.ReadAllBytes(path);

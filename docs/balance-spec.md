@@ -105,3 +105,16 @@ consolidação.
 O balanceamento atual permanece **provisório** até um playtest mais amplo,
 incluindo a recomendação já registrada de reavaliar `Moon Dagger` (crítico
 `0.12`) contra os comparáveis vanilla extraídos acima.
+
+## Nota de fechamento — Fase 6B (botas)
+
+As três botas (Miner's Boots, Obsidian Boots, Ethereal Boots) foram
+implementadas com os stats já vigentes em `assets/armory.json` (Defense/
+Immunity/Price), sem multiplicador automático por raridade — mesma regra já
+aplicada às armas. Nenhum valor de balanceamento foi alterado nesta etapa.
+
+O `ColorIndex` de cada bota (paleta vanilla `shoeColors.xnb`, índices 0-18) é
+uma escolha de identidade visual, não de balanceamento: Miner's Boots usa 3
+(Work Boots), Obsidian Boots usa 7 (Dark Boots), Ethereal Boots usa 9 (Genie
+Shoes). Ver `docs/vertical-slice.md` (seção Fase 6B) para a limitação
+deliberada de não ter uma textura de recolor customizada nesta fase.

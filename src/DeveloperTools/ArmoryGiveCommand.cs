@@ -1,5 +1,6 @@
 using StardewModdingAPI;
 using StardewValley;
+using StardewValley.Objects;
 using StardewValley.Tools;
 using ValleyArmory.Catalog;
 
@@ -9,13 +10,13 @@ internal sealed class ArmoryGiveCommand
 {
     private readonly ITranslationHelper translations;
     private readonly IMonitor monitor;
-    private readonly DeveloperWeaponCatalog weapons;
+    private readonly DeveloperEquipmentCatalog equipment;
 
     public ArmoryGiveCommand(CatalogIndex catalog, ITranslationHelper translations, IMonitor monitor)
     {
         this.translations = translations;
         this.monitor = monitor;
-        this.weapons = new DeveloperWeaponCatalog(catalog);
+        this.equipment = new DeveloperEquipmentCatalog(catalog);
     }
 
     public void Register(ICommandHelper commands)
@@ -39,9 +40,9 @@ internal sealed class ArmoryGiveCommand
             return;
         }
 
-        if (!this.weapons.TryResolve(args[0], out DeveloperWeaponEntry? entry) || entry is null)
+        if (!this.equipment.TryResolve(args[0], out DeveloperEquipmentEntry? entry) || entry is null)
         {
-            this.monitor.Log($"Unknown Valley Armory weapon alias '{args[0]}'. Use va_list to see available weapons.", LogLevel.Warn);
+            this.monitor.Log($"Unknown Valley Armory equipment alias '{args[0]}'. Use va_list to see available equipment.", LogLevel.Warn);
             this.ShowMessage("command.va-give.unknown-alias", isError: true);
             return;
         }
@@ -58,16 +59,16 @@ internal sealed class ArmoryGiveCommand
             return;
         }
 
-        if (item is not MeleeWeapon || !string.Equals(item.QualifiedItemId, entry.QualifiedItemId, StringComparison.Ordinal))
+        if (item is not (MeleeWeapon or Boots) || !string.Equals(item.QualifiedItemId, entry.QualifiedItemId, StringComparison.Ordinal))
         {
-            this.monitor.Log($"ItemRegistry did not create the expected weapon '{entry.QualifiedItemId}'.", LogLevel.Warn);
+            this.monitor.Log($"ItemRegistry did not create the expected equipment '{entry.QualifiedItemId}'.", LogLevel.Warn);
             this.ShowMessage("command.va-give.creation-failed", isError: true);
             return;
         }
 
         if (Game1.player.addItemToInventoryBool(item, makeActiveObject: false))
         {
-            this.monitor.Log($"Weapon '{entry.Alias}' ({entry.QualifiedItemId}) added to the player inventory.", LogLevel.Debug);
+            this.monitor.Log($"Equipment '{entry.Alias}' ({entry.QualifiedItemId}) added to the player inventory.", LogLevel.Debug);
             this.ShowMessage("command.va-give.success", isError: false);
             return;
         }
@@ -80,14 +81,14 @@ internal sealed class ArmoryGiveCommand
             groundLevel: -1,
             flopFish: false
         );
-        this.monitor.Log($"Player inventory was full; weapon '{entry.Alias}' was dropped safely at the player's position.", LogLevel.Debug);
+        this.monitor.Log($"Player inventory was full; equipment '{entry.Alias}' was dropped safely at the player's position.", LogLevel.Debug);
         this.ShowMessage("command.va-give.inventory-full", isError: false);
     }
 
     private void HandleList(string command, string[] args)
     {
         this.monitor.Log(this.translations.Get("command.va-list.header"), LogLevel.Info);
-        foreach (DeveloperWeaponEntry entry in this.weapons.Entries)
+        foreach (DeveloperEquipmentEntry entry in this.equipment.Entries)
         {
             this.monitor.Log(
                 $"- {entry.Alias} | {entry.Definition.Rarity} | {entry.Definition.Type} | {entry.QualifiedItemId}",

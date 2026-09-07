@@ -240,7 +240,8 @@
       "sprite": {
         "assetName": "Mods/romulot.ValleyArmory/Boots",
         "spriteIndex": 0
-      }
+      },
+      "colorIndex": 3
     },
     {
       "id": "romulot.ValleyArmory_ObsidianBoots",
@@ -257,7 +258,8 @@
       "sprite": {
         "assetName": "Mods/romulot.ValleyArmory/Boots",
         "spriteIndex": 1
-      }
+      },
+      "colorIndex": 7
     },
     {
       "id": "romulot.ValleyArmory_EtherealBoots",
@@ -274,7 +276,8 @@
       "sprite": {
         "assetName": "Mods/romulot.ValleyArmory/Boots",
         "spriteIndex": 2
-      }
+      },
+      "colorIndex": 9
     }
   ]
 }

@@ -303,6 +303,125 @@ Validação manual já realizada (registrada, não presumida):
 - Prismatic Blade ajustada manualmente até resultado visual aprovado, com a
   configuração final `#D63384` / `radius 3.00` / `intensity 0.75`.
 
-Próximo passo sugerido: **Fase 6B — botas** (`Data/Boots`, factory de botas,
-tooltip e, se aplicável, iluminação para as três botas reservadas), usando o
-mesmo pipeline genérico já validado nesta fase.
+## Fase 6B — botas
+
+### Escopo
+
+As três botas do catálogo passam a ser convertidas para `Data/Boots` e
+injetadas em runtime, com tooltip decorado. Nenhuma delas emite luz.
+
+```text
+(B)romulot.ValleyArmory_MinersBoots    — Common
+(B)romulot.ValleyArmory_ObsidianBoots  — Rare
+(B)romulot.ValleyArmory_EtherealBoots  — Epic
+```
+
+### Contrato real de Data/Boots (reauditado)
+
+Ver `docs/signature-audit.md` para o detalhamento completo. Resumo: o formato
+vanilla tem 7 campos (`Name/Description/Price/Defense/Immunity/ColorIndex/DisplayName`),
+mas o parser aceita até 10 — os 3 extras (não documentados, confirmados via
+desmontagem de IL) permitem `SpriteIndex` e nome de textura do ícone próprios
+(campos 8 e 9) e, opcionalmente, uma textura de recolor customizada para o
+farmer equipado (campo 7). Como o valor inteiro é dividido por `/` pelo
+próprio jogo, o campo de textura precisa usar `\` no lugar de `/`.
+
+`BootDataFactory` (`src/Assets/BootDataFactory.cs`) gera os 10 campos a partir
+de um `EquipmentDefinition` do tipo `Boots`, preservando os stats do catálogo
+sem transformação por raridade, e rejeitando `/` nos campos textuais
+traduzíveis (nome/descrição/displayName) — a conversão do nome do asset para
+`\` é automática, não depende do autor do catálogo escapar nada manualmente.
+
+### Injeção (Data/Boots)
+
+`BootAssetInjector` (`src/Assets/BootAssetInjector.cs`) espelha `AssetInjector`
+mas é um pipeline **separado**: edita `Data/Boots` (não `Data/Weapons`) de
+forma aditiva, nunca sobrescreve uma entrada existente, e uma colisão em uma
+bota não impede a injeção das outras duas. Também carrega
+`assets/boots.png` como `Mods/romulot.ValleyArmory/Boots`.
+
+### Sprites
+
+`assets/boots.png`: 48×16px, 3 células de 16×16 (índices `0`–`2`, um por
+bota), silhueta de bota lateral minimalista (cano + pé + sola), 5 cores planas
+por célula, sem anti-aliasing, fundo transparente, sem vazamento entre
+células — confirmado por `SpriteSheetTests`.
+
+### Tooltip
+
+Reaproveita `TooltipPresentationResolver` (agora também aceita
+`EquipmentType.Boots`) e o transpiler de cor do título, que já é genérico para
+qualquer `Item` (`IClickableMenu.drawHoverText`). A linha textual de raridade e
+o espaço extra do tooltip precisam de patches **próprios** para `Boots`
+(`src/Tooltips/BootsTooltipPatches.cs`), pois `Boots.drawTooltip`/
+`Boots.getExtraSpaceNeededForTooltipSpecialIcons` são overrides distintos dos
+de `MeleeWeapon`, mesmo com a mesma assinatura. `TooltipPatchManager` aplica
+os 5 patches (3 de arma + 2 de bota) atomicamente: falha em qualquer um
+desfaz todos e desliga a decoração, mantendo o tooltip vanilla.
+
+### Iluminação — ausência intencional
+
+Nenhuma bota emite luz, em nenhuma raridade. Isso já estava garantido pela
+própria assinatura do `LightAppearanceResolver`, cujo construtor filtra
+`catalog.GetAllEquipment()` por `Sword`/`Dagger`/`Hammer` — `Boots` nunca
+entra no dicionário de aparências. Nenhuma mudança de código foi necessária;
+`LightingTests` ganhou um teste explícito (`NoBootEverResolvesLightRegardlessOfRarity`)
+cobrindo as três botas para travar essa garantia.
+
+### Developer tools
+
+`DeveloperWeaponCatalog`/`DeveloperWeaponEntry` foram renomeados para
+`DeveloperEquipmentCatalog`/`DeveloperEquipmentEntry`
+(`src/DeveloperTools/DeveloperEquipmentCatalog.cs`) e agora incluem armas e
+botas, ordenados deterministicamente por grupo (armas primeiro, depois botas)
+e então por `SpriteIndex`. `va_give` aceita os 10 aliases e cria via
+`ItemRegistry.Create` tanto `MeleeWeapon` quanto `Boots`.
+
+| Alias | QualifiedItemId |
+|---|---|
+| `miners-boots` | `(B)romulot.ValleyArmory_MinersBoots` |
+| `obsidian-boots` | `(B)romulot.ValleyArmory_ObsidianBoots` |
+| `ethereal-boots` | `(B)romulot.ValleyArmory_EtherealBoots` |
+
+### Limitação deliberada: sem `assets/boots-colors.png`
+
+O campo 7 do formato estendido permite uma textura de recolor customizada
+para as botas equipadas no sprite do farmer (`Farmer.changeShoeColor`). Esta
+fase **não** implementa isso. Em vez de criar uma textura nova sem poder
+validar visualmente o alinhamento pixel a pixel com o spritesheet do farmer
+(risco de recolor quebrado/vazando para pixels errados, impossível de
+verificar sem rodar o jogo), cada bota usa um índice já existente da paleta
+vanilla `Characters/Farmer/shoeColors.xnb` (0–18), escolhido por
+aproximação de identidade visual:
+
+| Bota | ColorIndex | Referência vanilla |
+|---|---:|---|
+| Miner's Boots | 3 | Work Boots (utilitária) |
+| Obsidian Boots | 7 | Dark Boots (escura/robusta) |
+| Ethereal Boots | 9 | Genie Shoes (mística) |
+
+Isso é seguro (reutiliza um recurso vanilla já testado pelo próprio jogo) e
+reversível: se uma textura de recolor customizada for aprovada no futuro, ela
+se encaixa no campo 7 sem mudar o resto do formato.
+
+### Testes
+
+`BootsPipelineTests.cs` (novo): catálogo com exatamente 3 botas, formato de 10
+campos na ordem correta, stats preservados sem transformação por raridade,
+rejeição de definição não-Boots (e o inverso: `WeaponDataFactory` rejeita
+Boots), rejeição de `/` em campos traduzíveis, QualifiedItemIds `(B)` sem
+colisão com `(W)`, edição aditiva/colisão parcial/não-sobrescrita.
+`SpriteSheetTests.cs` ganhou 3 testes para `boots.png`. `LightingTests.cs`
+ganhou a garantia de ausência de luz. `TooltipPresentationTests.cs` e
+`DeveloperToolsTests.cs` foram estendidos para as 3 botas.
+
+### Validação manual pendente (a executar após esta fase)
+
+`va_list`/`va_give miners-boots|obsidian-boots|ethereal-boots`; sprite correto
+no inventário; aparência ao equipar (paleta vanilla reaproveitada); Defense/
+Immunity corretos; tooltip Common/Rare/Epic; confirmar que nenhuma bota cria
+luz; save/reload preserva; inventário cheio dropa aos pés; armas continuam
+funcionando sem regressão de tooltip/iluminação.
+
+Próximo passo sugerido: **Fase 6C** (a definir — capacete/peitoral/pernas,
+aquisição/drops, ou outro escopo, fora do que foi encerrado nesta fase).
