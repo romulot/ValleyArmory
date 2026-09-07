@@ -7,18 +7,66 @@ namespace ValleyArmory.Tests;
 
 public sealed class LightingTests
 {
-    [Fact]
-    public void RareMinersBladeResolvesLightFromCatalog()
+    public static IEnumerable<object[]> WeaponLightCases => new[]
+    {
+        new object[] { "(W)romulot.ValleyArmory_MinersBlade", new Color(0x4A, 0x90, 0xE2), 1.25f, 0.35f },
+        new object[] { "(W)romulot.ValleyArmory_ShadowFang", new Color(0x4A, 0x90, 0xE2), 1.25f, 0.35f },
+        new object[] { "(W)romulot.ValleyArmory_MoonDagger", new Color(0x8E, 0x5A, 0xC7), 1.75f, 0.6f },
+        new object[] { "(W)romulot.ValleyArmory_AbyssHammer", new Color(0x8E, 0x5A, 0xC7), 1.75f, 0.6f },
+        new object[] { "(W)romulot.ValleyArmory_PrismaticBlade", new Color(0xD6, 0x33, 0x84), 3.00f, 0.75f }
+    };
+
+    [Theory]
+    [MemberData(nameof(WeaponLightCases))]
+    public void IlluminatedWeaponsResolveTheirCatalogAppearance(string qualifiedItemId, Color color, float radius, float intensity)
     {
         LightAppearanceResolver resolver = CreateResolver();
 
-        bool found = resolver.TryResolve("(W)romulot.ValleyArmory_MinersBlade", out WeaponLightAppearance appearance);
+        bool found = resolver.TryResolve(qualifiedItemId, out WeaponLightAppearance appearance);
 
         Assert.True(found);
-        Assert.Equal(new Color(0x4A, 0x90, 0xE2), appearance.Color);
-        Assert.Equal(1.25f, appearance.Radius);
-        Assert.Equal(0.35f, appearance.Intensity);
+        Assert.Equal(color, appearance.Color);
+        Assert.Equal(radius, appearance.Radius);
+        Assert.Equal(intensity, appearance.Intensity);
         Assert.Equal(new Vector2(0f, -32f), appearance.Offset);
+    }
+
+    [Theory]
+    [InlineData("(W)romulot.ValleyArmory_BlackIronSword")]
+    [InlineData("(W)romulot.ValleyArmory_Stonebreaker")]
+    [InlineData("(B)romulot.ValleyArmory_MinersBoots")]
+    [InlineData("(W)0")]
+    [InlineData("(W)other.mod_Sword")]
+    [InlineData(null)]
+    public void CommonBootUnknownAndExternalItemsHaveNoLight(string? qualifiedItemId)
+    {
+        Assert.False(CreateResolver().TryResolve(qualifiedItemId, out _));
+    }
+
+    [Fact]
+    public void RuntimeLightColorsIncreaseInLuminanceWithRarityWithoutApproachingWhite()
+    {
+        LightAppearanceResolver resolver = CreateResolver();
+
+        Assert.True(resolver.TryResolve("(W)romulot.ValleyArmory_MinersBlade", out WeaponLightAppearance rare));
+        Assert.True(resolver.TryResolve("(W)romulot.ValleyArmory_MoonDagger", out WeaponLightAppearance epic));
+        Assert.True(resolver.TryResolve("(W)romulot.ValleyArmory_PrismaticBlade", out WeaponLightAppearance legendary));
+
+        Color rareColor = rare.ToRuntimeColor();
+        Color epicColor = epic.ToRuntimeColor();
+        Color legendaryColor = legendary.ToRuntimeColor();
+
+        // Regression guard: Rare and Epic runtime colors must not change while fixing Legendary.
+        Assert.Equal(new Color(26, 50, 79), rareColor);
+        Assert.Equal(new Color(85, 54, 119), epicColor);
+
+        // Legendary must be visibly brighter than both, without saturating toward white
+        // (a near-white runtime color renders as an invisible light in-game).
+        static int Luminance(Color c) => (int)Math.Round((0.299 * c.R) + (0.587 * c.G) + (0.114 * c.B));
+
+        Assert.True(Luminance(legendaryColor) > Luminance(epicColor));
+        Assert.True(Luminance(epicColor) > Luminance(rareColor));
+        Assert.True(legendaryColor.R < 200 && legendaryColor.G < 200 && legendaryColor.B < 200);
     }
 
     [Fact]
@@ -54,15 +102,28 @@ public sealed class LightingTests
         Assert.False(found);
     }
 
-    [Theory]
-    [InlineData("(W)0")]
-    [InlineData("(W)romulot.ValleyArmory_BlackIronSword")]
-    [InlineData(null)]
-    public void UnknownOrOutOfScopeItemHasNoLight(string? qualifiedItemId)
+    [Fact]
+    public void RareWeaponsShareTheSameBaseAppearance()
     {
-        bool found = CreateResolver().TryResolve(qualifiedItemId, out _);
+        LightAppearanceResolver resolver = CreateResolver();
 
-        Assert.False(found);
+        Assert.True(resolver.TryResolve("(W)romulot.ValleyArmory_MinersBlade", out WeaponLightAppearance first));
+        Assert.True(resolver.TryResolve("(W)romulot.ValleyArmory_ShadowFang", out WeaponLightAppearance second));
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public void StableAppearanceTransitionIsUpdateAndCommonTransitionIsRemove()
+    {
+        PlayerLightState state = new("romulot.ValleyArmory/weapon-light/42");
+        WeaponLightAppearance rare = new(new Color(1, 2, 3), 1.25f, 0.35f, Vector2.Zero);
+        WeaponLightAppearance epic = new(new Color(4, 5, 6), 1.75f, 0.6f, Vector2.Zero);
+
+        Assert.Equal(LightReconcileAction.Create, state.DetermineAction(true, "Farm", Vector2.Zero, rare));
+        state.MarkApplied("Farm", Vector2.Zero, rare);
+        Assert.Equal(LightReconcileAction.Update, state.DetermineAction(true, "Farm", Vector2.Zero, epic));
+        state.MarkApplied("Farm", Vector2.Zero, epic);
+        Assert.Equal(LightReconcileAction.Remove, state.DetermineAction(false, "Farm", Vector2.Zero, default));
     }
 
     [Fact]

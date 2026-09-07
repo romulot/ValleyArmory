@@ -165,6 +165,7 @@ internal sealed class EquippedWeaponLightController
             return;
 
         bool created = false;
+        bool appearanceChanged = state.HasLight && state.Appearance != appearance;
         if (!location.hasLightSource(lightId))
         {
             LightSource source = new(
@@ -194,6 +195,8 @@ internal sealed class EquippedWeaponLightController
         state.MarkApplied(location.NameOrUniqueName, position, appearance);
         if (created)
             this.monitor.Log($"light create: playerId={player.UniqueMultiplayerID}", LogLevel.Trace);
+        else if (appearanceChanged)
+            this.monitor.Log($"light appearance updated: playerId={player.UniqueMultiplayerID}", LogLevel.Trace);
     }
 
     private void RemoveLightFromTrackedLocation(PlayerLightState state, long playerId, string reason)

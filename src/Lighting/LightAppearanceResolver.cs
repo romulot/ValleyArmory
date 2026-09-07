@@ -1,7 +1,6 @@
 using Microsoft.Xna.Framework;
 using ValleyArmory.Assets;
 using ValleyArmory.Catalog;
-using ValleyArmory;
 
 namespace ValleyArmory.Lighting;
 
@@ -20,43 +19,33 @@ internal readonly record struct WeaponLightAppearance(Color Color, float Radius,
 
 internal sealed class LightAppearanceResolver
 {
-    private const string MinersBladeQualifiedItemId = EquipmentIdentity.MinersBladeQualifiedItemId;
-    private readonly bool hasMinersBladeAppearance;
-    private readonly WeaponLightAppearance minersBladeAppearance;
+    private readonly IReadOnlyDictionary<string, WeaponLightAppearance> appearances;
 
     public LightAppearanceResolver(CatalogIndex catalog)
     {
-        this.hasMinersBladeAppearance = TryBuildFromCatalog(catalog, out this.minersBladeAppearance);
+        this.appearances = catalog.GetAllEquipment()
+            .Where(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer)
+            .Select(item => (QualifiedItemId: EquipmentIdentity.GetQualifiedItemId(item), Item: item))
+            .Select(value => (value.QualifiedItemId, Appearance: TryBuildFromCatalog(catalog, value.Item)))
+            .Where(value => value.Appearance is not null)
+            .ToDictionary(value => value.QualifiedItemId, value => value.Appearance!.Value, StringComparer.Ordinal);
     }
 
     public bool TryResolve(string? qualifiedItemId, out WeaponLightAppearance appearance)
     {
         appearance = default;
-        if (!this.hasMinersBladeAppearance
-            || !string.Equals(qualifiedItemId, MinersBladeQualifiedItemId, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        appearance = this.minersBladeAppearance;
-        return true;
+        return qualifiedItemId is not null && this.appearances.TryGetValue(qualifiedItemId, out appearance);
     }
 
-    private static bool TryBuildFromCatalog(CatalogIndex catalog, out WeaponLightAppearance appearance)
+    private static WeaponLightAppearance? TryBuildFromCatalog(CatalogIndex catalog, EquipmentDefinition equipment)
     {
-        appearance = default;
-        if (!catalog.TryGetByQualifiedId(MinersBladeQualifiedItemId, out EquipmentDefinition? equipment)
-            || equipment is null
-            || !catalog.TryGetRarity(equipment.Rarity, out RarityDefinition? rarity)
-            || rarity is null)
-        {
-            return false;
-        }
+        if (!catalog.TryGetRarity(equipment.Rarity, out RarityDefinition? rarity) || rarity is null)
+            return null;
 
         LightOverride? lightOverride = equipment.OptionalVisualOverrides?.Light;
         bool enabled = lightOverride?.Enabled ?? rarity.LightEnabled;
         if (!enabled)
-            return false;
+            return null;
 
         string colorHex = lightOverride?.Color ?? rarity.LightColor;
         float radius = lightOverride?.Radius ?? rarity.LightRadius;
@@ -64,12 +53,14 @@ internal sealed class LightAppearanceResolver
         VectorOffset? offset = lightOverride?.Offset ?? rarity.LightOffset;
 
         if (radius <= 0 || intensity is < 0 or > 1 || !TryParseRgb(colorHex, out Color color))
-            return false;
+            return null;
 
-        appearance = new WeaponLightAppearance(color, radius, intensity, offset is null
-            ? Vector2.Zero
-            : new Vector2(offset.X, offset.Y));
-        return true;
+        return new WeaponLightAppearance(
+            color,
+            radius,
+            intensity,
+            offset is null ? Vector2.Zero : new Vector2(offset.X, offset.Y)
+        );
     }
 
     private static bool TryParseRgb(string value, out Color color)

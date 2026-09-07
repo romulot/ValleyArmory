@@ -119,9 +119,9 @@
       },
       "optionalVisualOverrides": {
         "light": {
-          "color": "#F2C94C",
-          "radius": 2.25,
-          "intensity": 0.85
+          "color": "#D63384",
+          "radius": 3.00,
+          "intensity": 0.75
         }
       }
     },
