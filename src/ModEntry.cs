@@ -34,7 +34,7 @@ internal sealed class ModEntry : Mod
         AssetInjector assetInjector = new(catalogIndex, helper.Translation, this.Monitor);
         helper.Events.Content.AssetRequested += assetInjector.OnAssetRequested;
 
-        new MinersBladeGiveCommand(helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
+        new ArmoryGiveCommand(catalogIndex, helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
 
         _ = new TooltipPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(
             new TooltipPresentationResolver(catalogIndex),

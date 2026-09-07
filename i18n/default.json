@@ -24,10 +24,13 @@
   "equipment.obsidian-boots.description": "Dense volcanic boots offering dependable protection.",
   "equipment.ethereal-boots.name": "Ethereal Boots",
   "equipment.ethereal-boots.description": "Unnaturally light boots resistant to hostile effects.",
-  "command.va-give.description": "Give the Miner's Blade for development testing. Usage: va_give miners-blade",
+  "command.va-give.description": "Give a Valley Armory weapon for development testing. Usage: va_give <item>",
+  "command.va-list.description": "List Valley Armory weapons available for development testing.",
+  "command.va-list.header": "Valley Armory weapons:",
   "command.va-give.world-not-ready": "Load a save before using this command.",
-  "command.va-give.usage": "Usage: va_give miners-blade",
-  "command.va-give.creation-failed": "The Miner's Blade could not be created. Check the SMAPI log for details.",
-  "command.va-give.success": "Miner's Blade added to your inventory.",
-  "command.va-give.inventory-full": "Your inventory is full. The Miner's Blade was dropped at your feet."
+  "command.va-give.usage": "Usage: va_give <item>",
+  "command.va-give.unknown-alias": "Unknown weapon alias. Use va_list to see available weapons.",
+  "command.va-give.creation-failed": "The weapon could not be created. Check the SMAPI log for details.",
+  "command.va-give.success": "Weapon added to your inventory.",
+  "command.va-give.inventory-full": "Your inventory is full. The weapon was dropped at your feet."
 }
