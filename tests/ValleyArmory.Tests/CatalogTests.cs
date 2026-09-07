@@ -71,13 +71,14 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void CatalogContainsExactlyTenEquipmentDefinitions()
+    public void CatalogContainsExactlyThirteenEquipmentDefinitions()
     {
         ArmoryCatalog catalog = LoadValidCatalog();
 
-        Assert.Equal(10, catalog.Equipment.Count);
+        Assert.Equal(13, catalog.Equipment.Count);
         Assert.Equal(7, catalog.Equipment.Count(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer));
         Assert.Equal(3, catalog.Equipment.Count(item => item.Type is EquipmentType.Boots));
+        Assert.Equal(3, catalog.Equipment.Count(item => item.Type is EquipmentType.Shirt));
     }
 
     [Fact]
@@ -87,9 +88,9 @@ public sealed class CatalogTests
             .GroupBy(item => item.Rarity, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
-        Assert.Equal(3, distribution["Common"]);
-        Assert.Equal(3, distribution["Rare"]);
-        Assert.Equal(3, distribution["Epic"]);
+        Assert.Equal(4, distribution["Common"]);
+        Assert.Equal(4, distribution["Rare"]);
+        Assert.Equal(4, distribution["Epic"]);
         Assert.Equal(1, distribution["Legendary"]);
     }
 

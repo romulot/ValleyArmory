@@ -423,5 +423,378 @@ Immunity corretos; tooltip Common/Rare/Epic; confirmar que nenhuma bota cria
 luz; save/reload preserva; inventário cheio dropa aos pés; armas continuam
 funcionando sem regressão de tooltip/iluminação.
 
-Próximo passo sugerido: **Fase 6C** (a definir — capacete/peitoral/pernas,
-aquisição/drops, ou outro escopo, fora do que foi encerrado nesta fase).
+## Fase 6C — armaduras
+
+### Decisão técnica
+
+Stardew Valley 1.6.15 não tem um item ou slot vanilla chamado "Armor". A
+representação real de roupa de corpo é `StardewValley.Objects.Clothing`, que
+cobre dois tipos de dado (`Data/Shirts` e `Data/Pants`, ambos fortemente
+tipados — `ShirtData`/`PantsData`, com `Texture`/`SpriteIndex` explícitos,
+igual a `WeaponData`). Ver `docs/signature-audit.md` para o detalhamento
+completo da auditoria.
+
+**Decisão:** cada "Armor" do Valley Armory é implementada como **um único
+Shirt** (`Data/Shirts`, QualifiedItemId `(S)`), não como shirt+pants. Motivos:
+
+- um Shirt já é um item vanilla completo e independente — equipar só a
+  camisa, sem calça, não quebra nada no jogo;
+- `PantsDataDefinition.GetSourceRect` usa uma grade fixa de 192×688px com
+  ícones 16×16, mais rígida e sem benefício claro para uma textura pequena e
+  dedicada;
+- dobrar o pipeline (Shirt + Pants) dobraria também a superfície de auditoria
+  e teste para um segundo mecanismo cujo layout de frames equipados também é
+  incerto (ver limitação abaixo), sem necessidade concreta pedida nesta fase;
+- mantém `va_give miners-armor` simples: um alias, um item, um patch de
+  tooltip — sem precisar sincronizar dois itens internos.
+
+Nenhum sistema paralelo de equipamento foi criado. `ShirtData.CustomFields`
+guarda a raridade exatamente como `WeaponData`/`ShirtData`.
+
+### Pipeline
+
+```text
+EquipmentDefinition (Type: Shirt)
+        ↓
+ArmorDataFactory.Create()  →  StardewValley.GameData.Shirts.ShirtData
+        ↓
+ArmorAssetInjector.EditShirts()  (edição aditiva, Data/Shirts)
+        ↓
+ItemRegistry.Create("(S)romulot.ValleyArmory_MinersArmor", ...)
+```
+
+Idêntico em estrutura ao pipeline de armas (`WeaponDataFactory` +
+`AssetInjector`), sem factory nem patch específico por item. `Defense`/
+`Immunity` customizados não são implementados nesta fase — `ShirtData` não
+tem esses campos, e não foi criado nenhum Harmony patch para adicioná-los
+(fora de escopo, conforme decidido).
+
+### Armaduras
+
+| Item | Raridade | Preço | Sprite | Combina com |
+|---|---|---:|---:|---|
+| Miner's Armor | Common | 350g | 0 | Miner's Boots |
+| Obsidian Armor | Rare | 850g | 1 | Obsidian Boots |
+| Ethereal Armor | Epic | 2100g | 2 | Ethereal Boots |
+
+Nenhuma armadura Legendary foi criada — a Prismatic Blade continua sendo o
+único item Legendary. A arquitetura (enum `EquipmentType.Shirt`,
+`ArmorDataFactory`, validador) já suporta adicionar uma futura armadura
+Legendary sem refatoração: bastaria uma nova entrada no catálogo.
+
+### Tooltip
+
+Diferente de `MeleeWeapon` e `Boots`, `StardewValley.Objects.Clothing` **não
+sobrescreve** `drawTooltip`/`getExtraSpaceNeededForTooltipSpecialIcons` —
+usa a implementação base de `Item` diretamente (confirmado por reflexão). Por
+isso, `ClothingTooltipPatches` (`src/Tooltips/ClothingTooltipPatches.cs`)
+aplica seu prefix/postfix na declaração de `Item`, não em `Clothing`. Na
+prática isso só afeta itens que o nosso `TooltipPresentationResolver`
+reconhece (early-exit para qualquer outro item), mas é um alvo de patch mais
+amplo que os anteriores — documentado aqui para quem for depurar
+compatibilidade com outros mods de tooltip no futuro. O transpiler de cor do
+título (`IClickableMenu.drawHoverText`) já era genérico e cobre armadura sem
+mudança. `TooltipPatchManager` aplica os 7 patches (3 arma + 2 bota + 2
+armadura) atomicamente — falha em qualquer um desliga a decoração inteira.
+
+### Iluminação — ausência intencional
+
+Nenhuma mudança de código foi necessária: `LightAppearanceResolver` filtra
+por `Sword`/`Dagger`/`Hammer` no construtor, então `Shirt` nunca entra no
+dicionário de aparências, exatamente como já acontecia com `Boots`.
+`LightingTests` ganhou `NoArmorEverResolvesLightRegardlessOfRarity` para
+travar essa garantia.
+
+### Assets
+
+`assets/armor.png`: 48×32px. Formato ditado pela fórmula real de
+`ShirtDataDefinition.GetSourceRect` (colunas = largura/2 = 24; cada ícone é
+8×8 num bloco de 32px de altura). Os 3 ícones reais ficam nas colunas 0/1/2
+(spriteIndex 0/1/2); as colunas 3/4/5 (metade direita, não usada quando
+`CanBeDyed=false`) recebem cópias espelhadas por precaução. Cada bloco de
+32px de altura é preenchido com 4 cópias idênticas do ícone (linhas
+0/8/16/24) — mitigação para a incerteza registrada em
+`docs/signature-audit.md` sobre quais sub-regiões `FarmerRenderer` amostra ao
+desenhar a roupa equipada em diferentes poses. Nenhum canal de anti-aliasing
+(alpha estritamente 0 ou 255), silhueta simples de colete/túnica em 8×8,
+identidade de cor compartilhada com a bota correspondente (marrom/couro,
+quase-preto com brilho arroxeado, lilás/branco pálido).
+
+### Developer tools
+
+`DeveloperWeaponCatalog` já havia sido renomeado para `DeveloperEquipmentCatalog`
+na Fase 6B; agora também inclui `Shirt`, com ordenação determinística por
+grupo (armas → botas → armaduras) e depois por `SpriteIndex`.
+
+| Alias | QualifiedItemId |
+|---|---|
+| `miners-armor` | `(S)romulot.ValleyArmory_MinersArmor` |
+| `obsidian-armor` | `(S)romulot.ValleyArmory_ObsidianArmor` |
+| `ethereal-armor` | `(S)romulot.ValleyArmory_EtherealArmor` |
+
+### Testes
+
+`ArmorPipelineTests.cs` (novo): catálogo com exatamente 3 armaduras,
+`ArmorDataFactory` produz `ShirtData` correto (nome/descrição traduzidos,
+preço, textura, spriteIndex, raridade em `CustomFields`, `CanBeDyed`/
+`IsPrismatic`/`HasSleeves` sempre `false`), stats não derivados de raridade,
+rejeição cruzada entre factories (`ArmorDataFactory` rejeita não-Shirt,
+`WeaponDataFactory`/`BootDataFactory` rejeitam Shirt), QualifiedItemIds `(S)`
+sem colisão, edição aditiva/colisão parcial/não-sobrescrita.
+`SpriteSheetTests.cs` ganhou 3 testes para `armor.png` (dimensão, fórmula
+real de sprite rect, ausência de anti-aliasing). `TooltipPresentationTests.cs`,
+`LightingTests.cs` e `DeveloperToolsTests.cs` foram estendidos para as 3
+armaduras. Catálogo e distribuição de raridade atualizados de 10 para 13
+itens (Common/Rare/Epic passam de 3 para 4 cada; Legendary continua 1).
+
+### Validação manual pendente (a executar após esta fase)
+
+`va_list`/`va_give miners-armor|obsidian-armor|ethereal-armor`; sprite
+correto no inventário; **aparência ao equipar em diferentes direções e
+durante caminhada** (a limitação registrada em signature-audit.md sobre
+frames amostrados por `FarmerRenderer` só pode ser validada jogando);
+combinação visual com a bota correspondente; tooltip Common/Rare/Epic;
+confirmar ausência de luz; save/reload preserva; inventário cheio dropa aos
+pés; armas e botas continuam funcionando sem regressão.
+
+Próximo passo sugerido logo após a Fase 6C: aquisição via loja (concluído
+como **Fase 7A**, ver abaixo). Capacete/pernas dedicados, drops, crafting,
+quests e stats customizados de armadura via Harmony seguem em aberto para
+fases futuras.
+
+## Fase 7A — aquisição via loja (Adventurer's Guild)
+
+### Decisão técnica
+
+`Data/Shops` vive em um assembly separado (`StardewValley.GameData.dll`),
+não em `Stardew Valley.dll` — diferente de `WeaponData`/`ShirtData`. O
+identificador real da Adventurer's Guild é `AdventureShop` (dono: Marlon),
+confirmado carregando `Data/Shops` de verdade (77 entradas). Detalhes
+completos em `docs/signature-audit.md` (seção "Lojas / Adventurer's Guild —
+Fase 7A").
+
+`AcquisitionMetadata` ganhou um campo `Source` (enum `Unspecified | Shop |
+Drop | Crafting | Quest | Reward`) e um bloco opcional `Shop` (`ShopId`,
+`Condition`). Só `Shop` tem implementação real; os demais valores existem
+apenas como rótulo declarativo para uso futuro — nenhuma classe ou pipeline
+vazio foi criado para eles. O preço de venda reaproveita o `stats.price` já
+existente (nenhum campo de preço duplicado).
+
+### Pipeline
+
+```
+EquipmentDefinition.Acquisition (Source=Shop, Shop={ShopId, Condition})
+        ↓
+ShopAcquisitionInjector.ApplyTo(Dictionary<string, ShopData>)
+        ↓ (agrupa por ShopId, resolve item existente no dicionário)
+ShopData.Items.Add(ShopItemData)  // Id=<equipamento>, ItemId=<Qualified ID>, Price=stats.Price, AvailableStock=-1, Condition=<GSQ ou null>
+        ↓
+Data/Shops (AdventureShop) — edição aditiva, nunca substitui a loja
+```
+
+Diferente de `Data/Boots`/`Data/Shirts` (chave nova em um dicionário
+top-level via `NonOverwritingAssetEditor.TryAdd`), aqui a edição é um
+**append** à lista `Items` de uma entrada de dicionário já existente
+(`AdventureShop`), com isolamento de falha por item (try/catch por
+definição) e detecção de colisão por `ShopItemData.Id` dentro da própria
+lista.
+
+### Progressão configurada
+
+| Equipamento | Tipo | Raridade | Preço | Condição | Shop |
+|---|---|---|---:|---|---|
+| Black Iron Sword | Espada | Common | 1100g | `MINE_LOWEST_LEVEL_REACHED 10` | AdventureShop |
+| Stonebreaker | Martelo | Common | 1200g | `MINE_LOWEST_LEVEL_REACHED 10` | AdventureShop |
+| Miner's Boots | Botas | Common | 400g | `MINE_LOWEST_LEVEL_REACHED 10` | AdventureShop |
+| Miner's Armor | Armadura | Common | 350g | `MINE_LOWEST_LEVEL_REACHED 10` | AdventureShop |
+| Miner's Blade | Espada | Rare | 900g | `MINE_LOWEST_LEVEL_REACHED 40` | AdventureShop |
+| Shadow Fang | Adaga | Rare | 1000g | `MINE_LOWEST_LEVEL_REACHED 40` | AdventureShop |
+| Obsidian Boots | Botas | Rare | 900g | `MINE_LOWEST_LEVEL_REACHED 40` | AdventureShop |
+| Obsidian Armor | Armadura | Rare | 850g | `MINE_LOWEST_LEVEL_REACHED 40` | AdventureShop |
+| Moon Dagger | Adaga | Epic | 2800g | `MINE_LOWEST_LEVEL_REACHED 80` | AdventureShop |
+| Abyss Hammer | Martelo | Epic | 4000g | `MINE_LOWEST_LEVEL_REACHED 80` | AdventureShop |
+| Ethereal Boots | Botas | Epic | 2200g | `MINE_LOWEST_LEVEL_REACHED 80` | AdventureShop |
+| Ethereal Armor | Armadura | Epic | 2100g | `MINE_LOWEST_LEVEL_REACHED 80` | AdventureShop |
+
+Os patamares 10/40/80 não são arbitrários: reproduzem exatamente os níveis
+já usados pelo próprio `AdventureShop` vanilla para armas/botas de força
+comparável (ex.: `WorkBoots`/`Femur` em 10, `ObsidianEdge`/anéis em 40-45,
+`(B)512`/anéis em 80). `AvailableStock = -1` (ilimitado) em todos, também
+espelhando o padrão vanilla real observado.
+
+### Equipamento fora da loja
+
+**Prismatic Blade** (Legendary) permanece com `Source: Unspecified` — sem
+bloco `Shop`. Venda direta na Guilda tornaria o item lendário trivialmente
+acessível via ouro, o que não é coerente com seu papel de sidegrade
+endgame; a decisão foi documentar essa ausência em vez de forçar uma
+condição artificial só para preencher a tabela. Fica reservado para uma
+futura fase de quest/recompensa/drop.
+
+### Preços de armadura (Fase 6C) — preservados
+
+Os preços de Miner's/Obsidian/Ethereal Armor (350g/850g/2100g) foram
+auditados nesta fase para uso como preço de venda na Guilda e considerados
+razoáveis frente aos comparáveis de `docs/balance-spec.md`; nenhum valor foi
+alterado.
+
+### Compatibilidade e isolamento
+
+`AdventureShop.Items` já vem com 40 entradas vanilla; a injeção do Valley
+Armory apenas dá `.Add` na lista existente. `ShopItemData.Id` usa o ID
+namespaced completo do Valley Armory (não um rótulo curto tipo
+`"ElfBlade"`), evitando colisão com qualquer entrada vanilla ou de outro
+mod. Uma colisão de `Id` em um item não impede os demais de serem
+adicionados (testado em `AcquisitionPipelineTests.cs`).
+
+### Tooltip e developer tools — inalterados
+
+Nenhum preço/condição de loja foi adicionado ao tooltip. `va_list`/`va_give`
+continuam ferramentas de desenvolvimento; nenhum alias novo foi criado
+apenas por causa da aquisição (os 13 aliases já existentes cobrem os mesmos
+equipamentos).
+
+### Testes
+
+`AcquisitionPipelineTests.cs` (novo, 19 testes): validação de definição
+(shopId ausente, bloco `shop` ausente com `Source=Shop`, `Source` não-Shop
+carregando bloco `shop` indevido, `Source` ausente, preço zero com
+aquisição de loja, equipamento sem aquisição de loja permitido), nível de
+catálogo (12 de 13 configurados para loja, preços/shopIds explícitos,
+Prismatic Blade fora da loja), pipeline (`ShopAcquisitionInjector.BuildEntry`
+gera Qualified ID/preço/estoque/condição corretos para arma, bota e
+armadura; ausência de condição preservada como sempre-disponível; nenhuma
+lógica depende do nome do equipamento), compatibilidade (`ApplyTo` preserva
+entradas vanilla, ignora `ShopId` desconhecido sem lançar exceção, isola uma
+colisão sem bloquear os demais itens, não toca em outras lojas do
+dicionário).
+
+### Validação manual pendente (a executar após esta fase)
+
+Abrir o jogo, carregar um save, visitar a Adventurer's Guild em diferentes
+estágios de progresso nas minas (nível < 10, 10-39, 40-79, 80+) e confirmar
+que os itens aparecem/desaparecem conforme a condição; comprar pelo menos
+uma arma, uma bota e uma armadura e confirmar que funcionam normalmente;
+confirmar que itens vanilla da Guilda continuam presentes e sem duplicatas;
+confirmar tooltip/raridade/iluminação normais nos itens comprados.
+
+Próximo passo sugerido logo após a Fase 7A: drops de monstro (concluído como
+**Fase 7B**, ver abaixo). Crafting, quests e recompensas seguem em aberto.
+
+## Fase 7B — aquisição via drops de monstro
+
+### Decisão técnica
+
+`Data/Monsters` continua no formato legado (`Dictionary<string,string>`,
+registro posicional) e seu campo de drops só aceita IDs de objeto simples —
+não há como declarar ali um Qualified Item ID. Por isso o Valley Armory
+**não edita `Data/Monsters`**; em vez disso usa o ponto de extensão real que
+o próprio jogo expõe para esse fim: `Monster.getExtraDropItems()`, um método
+virtual chamado uma única vez por `GameLocation.monsterDrop` e já usado
+nativamente por Ghost/Bat/Bug/RockGolem/BigSlime para seus drops especiais.
+Um único patch Harmony **postfix** nesse método (na implementação base)
+cobre os 51 monstros de `Data/Monsters`, incluindo os 5 subtipos especiais,
+porque todos eles chamam `base.getExtraDropItems()` internamente (confirmado
+por disassembly de IL). Detalhes completos em `docs/signature-audit.md`
+(seção "Drops de monstro — Fase 7B").
+
+Harmony foi necessário aqui (diferente da Fase 7A) porque, ao contrário de
+`Data/Shops`, não existe um asset de dados que o motor já avalie
+nativamente para decidir e materializar esse tipo de drop — a decisão
+(condição, chance, criação do item) precisa ser código.
+
+### Evolução do modelo de `Acquisition`
+
+A Fase 7A usava um único campo `Source` (enum) que só permitia UMA forma de
+aquisição por equipamento. Para permitir Shop **e** Drop coexistindo no
+mesmo item, `Source` foi removido e `AcquisitionMetadata` passou a expor
+dois blocos independentes e opcionais, `Shop` e `Drop` — a presença de cada
+um é que determina se aquele método está ativo, sem discriminador central.
+Migração verificada por teste (`PhaseSevenAShopConfigurationIsPreservedExactlyAfterTheDropMigration`):
+os 12 itens de loja mantêm exatamente o mesmo `ShopId`/preço/condição de
+antes; `Prismatic Blade` continua sem nenhuma aquisição.
+
+### Pipeline
+
+```
+EquipmentDefinition.Acquisition.Drop (SourceType=Monster, SourceId, Chance, Condition?)
+        ↓
+DropRuleResolver (ILookup<string monsterName, DropRule>)
+        ↓
+MonsterDropPatches.Postfix(Monster __instance, ref List<Item> __result)
+        │  (Harmony postfix em Monster.getExtraDropItems(), chamado por GameLocation.monsterDrop)
+        ├── GameStateQuery.CheckConditions(condition, ...)   se condition presente
+        ├── Game1.random.NextDouble() < Chance                (DropRuleResolver.RolledSuccess, testável isoladamente)
+        └── ItemRegistry.Create(EquipmentIdentity.GetQualifiedItemId(equipment))  → __result.Add(item)
+        ↓
+GameLocation.monsterDrop converte cada Item em Debris real (pipeline vanilla, sem código nosso)
+```
+
+`DropPatchContext` é o mesmo padrão estático de ponte já usado por
+`TooltipPatchContext`, necessário porque o método do Harmony precisa ser
+estático.
+
+### Drops configurados
+
+| Equipamento | Raridade | Origem | Chance | Condição |
+|---|---|---:|---:|---|
+| Miner's Boots | Common | Green Slime | 6% | — |
+| Shadow Fang | Rare | Shadow Brute | 5% | MINE_LOWEST_LEVEL_REACHED 40 |
+| Obsidian Boots | Rare | Lava Crab | 5% | — |
+| Obsidian Armor | Rare | Hot Head | 4% | — |
+| Moon Dagger | Epic | Skeleton Mage | 2% | MINE_LOWEST_LEVEL_REACHED 80 |
+| Abyss Hammer | Epic | Iridium Golem | 2% | MINE_LOWEST_LEVEL_REACHED 80 |
+| Ethereal Boots | Epic | Carbon Ghost | 1.5% | MINE_LOWEST_LEVEL_REACHED 80 |
+| Ethereal Armor | Epic | Putrid Ghost | 1.5% | MINE_LOWEST_LEVEL_REACHED 80 |
+
+Todos os 8 acima **também** têm Shop (Shop + Drop coexistindo). Black Iron
+Sword, Stonebreaker, Miner's Armor e Miner's Blade permanecem só-Shop, por
+decisão de escopo (evitar drop em todo o catálogo). Prismatic Blade não tem
+Shop nem Drop.
+
+Justificativa temática, não só por raridade: Shadow Brute/Shadow Fang
+(sombrio), Lava Crab/Hot Head → Obsidian (Vulcão, tema lava/obsidiana),
+Skeleton Mage/Iridium Golem (minas profundas, papel Epic), Carbon
+Ghost/Putrid Ghost → Ethereal (variantes fantasmagóricas do Skull Cavern,
+combinam com a identidade "etérea" das Fases 6B/6C). As chances (1.5%-6%)
+foram escolhidas bem abaixo dos comparáveis vanilla de recursos comuns
+(30%-90% para itens como fatias/geodos no mesmo `Data/Monsters`), refletindo
+que equipamento é muito mais significativo que um recurso empilhável; o teto
+de validação (50%) existe só para impedir um valor absurdo futuro, não
+porque algum item chega perto disso.
+
+### Multiplayer e RNG
+
+Nenhuma checagem `IsMainPlayer` foi adicionada: a cadeia real
+`takeDamage → damageMonster → onMonsterKilled → monsterDrop →
+getExtraDropItems` só executa no cliente do farmer que desferiu o golpe
+fatal (confirmado por disassembly, não assumido) — o mesmo modelo que já
+protege os drops especiais vanilla contra duplicação. RNG usa `Game1.random`
+(mesma fonte usada por `Ghost.getExtraDropItems()`), nunca `new Random()`.
+
+### Testes
+
+`AcquisitionPipelineTests.cs` ganhou a seção de Drop: validação de definição
+(`sourceType`/`sourceId`/`chance` obrigatórios, chance acima do teto de 50%
+rejeitada, condição em branco rejeitada), catálogo (8 de 13 configurados
+para drop, todos com `SourceType=Monster` e `SourceId` num identificador
+centralizado conhecido, Shop+Drop coexistindo em Shadow Fang, Prismatic
+Blade sem nenhuma aquisição), pipeline (`DropRuleResolver.GetRulesFor`
+resolve por monstro sem depender do nome do equipamento, suporta múltiplas
+regras no mesmo monstro sem duplicação), RNG (`RolledSuccess` testado com
+valores abaixo/no limite/acima da chance, de forma determinística e sem
+tocar `Game1.random`), migração (os 12 itens de loja da Fase 7A preservados
+byte a byte na configuração).
+
+### Validação manual pendente (a executar após esta fase)
+
+Visitar as minas em profundidades correspondentes às condições configuradas
+e derrotar os monstros listados o suficiente para observar pelo menos um
+drop de cada; confirmar que o item aparece como debris normal no chão,
+pode ser coletado, mantém tooltip/raridade/iluminação corretos; confirmar
+que a loja continua funcionando em paralelo; multiplayer/split-screen não
+testado manualmente (autoridade confirmada apenas por análise estática).
+
+Próximo passo sugerido: **Fase 7C** (crafting, quests ou recompensas —
+fontes já previstas em `DropAcquisition`/`ShopAcquisition` mas sem
+implementação).

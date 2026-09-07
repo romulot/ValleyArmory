@@ -26,7 +26,10 @@ internal sealed class ArmoryCatalogValidator
         ["romulot.ValleyArmory_AbyssHammer"] = EquipmentType.Hammer,
         ["romulot.ValleyArmory_MinersBoots"] = EquipmentType.Boots,
         ["romulot.ValleyArmory_ObsidianBoots"] = EquipmentType.Boots,
-        ["romulot.ValleyArmory_EtherealBoots"] = EquipmentType.Boots
+        ["romulot.ValleyArmory_EtherealBoots"] = EquipmentType.Boots,
+        ["romulot.ValleyArmory_MinersArmor"] = EquipmentType.Shirt,
+        ["romulot.ValleyArmory_ObsidianArmor"] = EquipmentType.Shirt,
+        ["romulot.ValleyArmory_EtherealArmor"] = EquipmentType.Shirt
     };
 
     private static readonly Regex PermanentIdPattern = new(
@@ -113,9 +116,10 @@ internal sealed class ArmoryCatalogValidator
     {
         int weaponCount = equipment.Count(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer);
         int bootsCount = equipment.Count(item => item.Type is EquipmentType.Boots);
-        if (weaponCount != 7 || bootsCount != 3)
+        int shirtCount = equipment.Count(item => item.Type is EquipmentType.Shirt);
+        if (weaponCount != 7 || bootsCount != 3 || shirtCount != 3)
         {
-            errors.Add($"catalog.equipment: expected exactly 7 weapons and 3 boots, found {weaponCount} weapons and {bootsCount} boots.");
+            errors.Add($"catalog.equipment: expected exactly 7 weapons, 3 boots and 3 armor shirts, found {weaponCount} weapons, {bootsCount} boots and {shirtCount} armor shirts.");
         }
 
         HashSet<string> rarityIds = rarities.Select(rarity => rarity.Id).ToHashSet(StringComparer.Ordinal);
@@ -141,7 +145,7 @@ internal sealed class ArmoryCatalogValidator
 
                 if (!PermanentEquipment.TryGetValue(item.Id, out EquipmentType expectedType))
                 {
-                    errors.Add($"{field}.id: ID is not one of the ten reserved permanent equipment IDs.");
+                    errors.Add($"{field}.id: ID is not one of the thirteen reserved permanent equipment IDs.");
                 }
                 else if (item.Type is not null && item.Type != expectedType)
                 {
@@ -154,9 +158,9 @@ internal sealed class ArmoryCatalogValidator
                 errors.Add($"{field}.type: value is required.");
             }
 
-            if (item.Type is EquipmentType.Boots && item.WeaponBehavior is not null)
+            if (item.Type is EquipmentType.Boots or EquipmentType.Shirt && item.WeaponBehavior is not null)
             {
-                errors.Add($"{field}.weaponBehavior: boots cannot define a weapon behavior.");
+                errors.Add($"{field}.weaponBehavior: boots and armor cannot define a weapon behavior.");
             }
 
             if (item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer
@@ -170,10 +174,9 @@ internal sealed class ArmoryCatalogValidator
                 errors.Add($"{field}.colorIndex: boots require a value between 0 and 18 (vanilla shoe color palette).");
             }
 
-            if (item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer
-                && item.ColorIndex is not null)
+            if (item.Type is not EquipmentType.Boots && item.ColorIndex is not null)
             {
-                errors.Add($"{field}.colorIndex: weapons cannot define a boots color index.");
+                errors.Add($"{field}.colorIndex: only boots may define a boots color index.");
             }
 
             if (!rarityIds.Contains(item.Rarity))
@@ -185,7 +188,7 @@ internal sealed class ArmoryCatalogValidator
             RequireTranslationKey(item.DescriptionKey, $"{field}.descriptionKey", errors);
             this.ValidateStats(item, field, errors);
             this.ValidateSprite(item.Sprite, field, errors);
-            this.ValidateAcquisition(item.Acquisition, field, errors);
+            this.ValidateAcquisition(item, field, errors);
             this.ValidateOverrides(item.OptionalVisualOverrides, field, errors);
         }
 
@@ -236,6 +239,23 @@ internal sealed class ArmoryCatalogValidator
                 stats.Precision != 0 || stats.AreaOfEffect != 0)
             {
                 errors.Add($"{field}.stats: boots cannot define weapon stats.");
+            }
+
+            return;
+        }
+
+        if (item.Type is EquipmentType.Shirt)
+        {
+            if (stats.Defense != 0 || stats.Immunity is not null)
+            {
+                errors.Add($"{field}.stats: armor cannot define Defense or Immunity in this phase.");
+            }
+
+            if (stats.MinDamage is not null || stats.MaxDamage is not null || stats.Speed is not null ||
+                stats.CritChance is not null || stats.CritMultiplier is not null || stats.Knockback is not null ||
+                stats.Precision != 0 || stats.AreaOfEffect != 0)
+            {
+                errors.Add($"{field}.stats: armor cannot define weapon stats.");
             }
 
             return;
@@ -316,11 +336,67 @@ internal sealed class ArmoryCatalogValidator
         }
     }
 
-    private void ValidateAcquisition(AcquisitionMetadata? acquisition, string field, List<string> errors)
+    /// <summary>Highest chance a single drop rule may declare, so a modder can't accidentally trivialize the shop with an "always drops" rule.</summary>
+    private const double MaximumDropChance = 0.5;
+
+    private void ValidateAcquisition(EquipmentDefinition item, string field, List<string> errors)
     {
-        if (acquisition is null || string.IsNullOrWhiteSpace(acquisition.Method))
+        AcquisitionMetadata? acquisition = item.Acquisition;
+        if (acquisition is null)
         {
-            errors.Add($"{field}.acquisition.method: metadata value is required.");
+            errors.Add($"{field}.acquisition: value is required.");
+            return;
+        }
+
+        if (acquisition.Shop is not null)
+        {
+            this.ValidateShopAcquisition(item, acquisition.Shop, field, errors);
+        }
+
+        if (acquisition.Drop is not null)
+        {
+            this.ValidateDropAcquisition(acquisition.Drop, field, errors);
+        }
+    }
+
+    private void ValidateShopAcquisition(EquipmentDefinition item, ShopAcquisition shop, string field, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(shop.ShopId))
+        {
+            errors.Add($"{field}.acquisition.shop.shopId: value is required.");
+        }
+
+        if (shop.Condition is not null && string.IsNullOrWhiteSpace(shop.Condition))
+        {
+            errors.Add($"{field}.acquisition.shop.condition: must not be blank when present.");
+        }
+
+        if (item.Stats is not null && item.Stats.Price <= 0)
+        {
+            errors.Add($"{field}.acquisition.shop: requires stats.price greater than zero.");
+        }
+    }
+
+    private void ValidateDropAcquisition(DropAcquisition drop, string field, List<string> errors)
+    {
+        if (drop.SourceType is null)
+        {
+            errors.Add($"{field}.acquisition.drop.sourceType: value is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(drop.SourceId))
+        {
+            errors.Add($"{field}.acquisition.drop.sourceId: value is required.");
+        }
+
+        if (drop.Chance <= 0 || drop.Chance > MaximumDropChance)
+        {
+            errors.Add($"{field}.acquisition.drop.chance: must be greater than zero and at most {MaximumDropChance:0.##}.");
+        }
+
+        if (drop.Condition is not null && string.IsNullOrWhiteSpace(drop.Condition))
+        {
+            errors.Add($"{field}.acquisition.drop.condition: must not be blank when present.");
         }
     }
 

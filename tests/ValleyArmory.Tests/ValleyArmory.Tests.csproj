@@ -25,6 +25,7 @@
     <None Include="../../assets/armory.json" Link="Fixtures/armory.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../assets/weapons.png" Link="Fixtures/weapons.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../assets/boots.png" Link="Fixtures/boots.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../assets/armor.png" Link="Fixtures/armor.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../i18n/default.json" Link="Fixtures/i18n/default.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../i18n/pt-BR.json" Link="Fixtures/i18n/pt-BR.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

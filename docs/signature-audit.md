@@ -211,6 +211,83 @@ ItemRegistry.Create("(W)romulot.ValleyArmory_MinersBlade", 1, 0, false)
 
 O comando de desenvolvimento que entrega um item deve passar pelo mesmo caminho, sem construir `MeleeWeapon` ou `Boots` manualmente.
 
+### Armaduras / wearables — Fase 6C (reauditoria)
+
+Antes de implementar, foi confirmado no assembly `1.6.15.24356` que **não existe** um item
+vanilla ou um slot chamado "Armor". O jogo representa roupa de corpo através de duas
+classes de wearable, ambas materializadas em runtime pela mesma classe de item:
+
+```csharp
+public class StardewValley.Objects.Clothing  // classe de runtime tanto para shirt quanto para pants
+{
+    NetEnum<ClothesType> clothesType;         // enum: SHIRT, PANTS (confirmado via reflexão)
+    NetInt indexInTileSheet;
+    NetInt price;
+    NetBool dyeable;
+    NetColor clothesColor;
+    NetBool isPrismatic;
+}
+```
+
+Ao contrário de `Data/Boots` (formato legado de string), **`Data/Shirts` e `Data/Pants` já são
+fortemente tipados** em 1.6, com um formato muito mais parecido ao de `Data/Weapons`:
+
+```csharp
+public class StardewValley.GameData.Shirts.ShirtData
+{
+    public string Name;
+    public string DisplayName;
+    public string Description;
+    public int Price;
+    public string Texture;      // asset explícito — igual a WeaponData.Texture, sem hack de campo extra
+    public int SpriteIndex;
+    public string DefaultColor;
+    public bool CanBeDyed;
+    public bool IsPrismatic;
+    public bool HasSleeves;     // exclusivo de ShirtData — PantsData não tem
+    public bool CanChooseDuringCharacterCustomization;
+    public Dictionary<string, string> CustomFields;
+}
+```
+
+`PantsData` tem os mesmos campos, exceto `HasSleeves`. Confirmado carregando o asset real
+(`ContentManager.Load<Dictionary<string, ShirtData>>("Data/Shirts")`): 303 entradas vanilla,
+todas com `Texture=null` (cai no default `Characters\Farmer\shirts`), `SpriteIndex` sequencial.
+`Data/Pants` tem 18 entradas vanilla, mesmo padrão.
+
+QualifiedItemId: confirmado via `ItemRegistry.type_shirt = "(S)"` e `ItemRegistry.type_pants = "(P)"`
+(constantes públicas, junto com `type_boots="(B)"` e `type_weapon="(W)"` já usados).
+
+**Formato do ícone (fonte de verdade: IL de `ShirtDataDefinition.GetSourceRect`, disassemblado
+via `System.Reflection.Emit.OpCodes` sem decompilador):**
+
+```text
+columns = texture.Width / 2
+x = (spriteIndex * 8) % columns
+y = (spriteIndex * 8 / columns) * 32
+rect = (x, y, 8, 8)
+```
+
+Ou seja, cada ícone é **8×8px**, a largura útil é só a METADE esquerda da textura (`columns`),
+e cada "bloco" de sprite tem **32px de altura**. `PantsDataDefinition.GetSourceRect` usa uma
+grade fixa de 192×688px com ícones de 16×16 — mais rígida e menos adequada a uma textura própria
+pequena, o que reforça a escolha por Shirt nesta fase.
+
+**Limitação importante, não resolvida nesta fase:** `FarmerRenderer.drawHairAndAccesories`
+recalcula `shirtSourceRect` a cada desenho (não há um único ponto de "trocar roupa" que grave
+o rect uma vez), e o método é grande o suficiente que não foi disassemblado por completo —
+não temos confirmação de quais sub-regiões além do ícone (`y=0`) são amostradas quando a peça é
+desenhada no personagem em movimento/direções diferentes. Mitigação adotada: `assets/armor.png`
+replica o mesmo pixel art nas 4 sub-linhas de 8px de cada bloco de 32px (e também nas colunas
+espelhadas da metade direita da textura, não usada quando `CanBeDyed=false`), então qualquer
+sub-retângulo amostrado mostra arte válida e coerente, nunca lixo/transparência incorreta.
+Isso ficou registrado como pendência de validação manual em `docs/vertical-slice.md`.
+
+Também confirmado: `Clothing` **não sobrescreve** `drawTooltip` nem
+`getExtraSpaceNeededForTooltipSpecialIcons` (ao contrário de `MeleeWeapon` e `Boots`), então o
+patch de tooltip para armaduras precisou ser aplicado na declaração base em `Item`, não em
+`Clothing` — ver `docs/vertical-slice.md` (seção Fase 6C) para o racional completo.
+
 ## Tooltip
 
 Não foi encontrado evento público do SMAPI que represente semanticamente a medição e o desenho de um tooltip de item. Foram confirmados no jogo os seguintes pontos:
@@ -449,6 +526,90 @@ Raridade jamais aplicará multiplicadores automáticos. Todo atributo efetivo se
 - [x] IDs permanentes, ferramentas de desenvolvimento, especificação de balanceamento e sequência vertical incorporados ao plano;
 - [ ] comportamento renderizado, multiplayer e split-screen — deliberadamente reservado para a validação da vertical slice.
 
+## Lojas / Adventurer's Guild — Fase 7A (reauditoria)
+
+Auditoria feita via reflexão + carregamento real de `Data/Shops` no assembly instalado `1.6.15.24356` (mesma técnica de scratchpad das fases anteriores: `AssemblyLoadContext.Default.Resolving` + `LocalizedContentManager` headless, sem `GraphicsDevice`, funcional para assets puramente de dados).
+
+### Localização real dos tipos
+
+Ao contrário de `WeaponData`/`ShirtData`/`PantsData` (que vivem em `Stardew Valley.dll`), os tipos de loja vivem em um assembly **separado**: `StardewValley.GameData.dll` (mesma versão `1.6.15.24356`), namespace `StardewValley.GameData.Shops`:
+
+- `ShopData` — dados de uma loja inteira (chave do dicionário `Data/Shops`).
+- `ShopItemData` — uma entrada de item vendável dentro da loja.
+- `ShopOwnerData` / `ShopDialogueData` / `ShopThemeData` / `LimitedStockMode` / `StackSizeVisibility` — suporte a NPC dono, diálogo, tema visual e modos de estoque.
+
+`StardewValley.Internal.ShopBuilder` (em `Stardew Valley.dll`) é a classe que consome `ShopData`/`ShopItemData` para montar o estoque real (`GetShopStock`), resolver preço base (`GetBasePrice`) e donos atuais (`GetCurrentOwners`); não foi necessário reimplementar nenhuma dessas regras, apenas fornecer dados corretos.
+
+### Asset e identificador real
+
+`Data/Shops` → `Dictionary<string, ShopData>`, carregado e confirmado com **77 entradas** na instalação real. O identificador real da Adventurer's Guild é `AdventureShop` (não "AdventurersGuild", "Guild" ou qualquer variação do nome visual). Dono confirmado: `Marlon` (`ShopOwnerData.Id/Name = "Marlon"`, `Type = NamedNpc`).
+
+Esse identificador foi centralizado em `ValleyArmory.Acquisition.ShopIdentifiers.AdventureGuild` — nenhuma string mágica solta pelo pipeline.
+
+### Estrutura real de `ShopItemData` (campos relevantes)
+
+```
+Id                string   // chave estável da entrada dentro da lista (não precisa ser igual ao vanilla)
+ItemId            string   // Qualified Item ID direto: "(W)0", "(B)507", "(O)529"
+Price             int      // preço explícito, sem fórmula
+AvailableStock    int      // -1 = ilimitado (confirmado: todas as entradas reais usam -1)
+Condition         string   // Game State Query (GSQ) opcional
+```
+
+`Items` é um `List<ShopItemData>` (não dicionário) dentro de `ShopData` — edição aditiva correta é **append** à lista de uma entrada de dicionário já existente, não `TryAdd` num dicionário top-level como em `Data/Boots`/`Data/Shirts`. Isso exige um padrão de injeção ligeiramente diferente dos usados nas fases anteriores.
+
+### Conditions reais confirmadas (Game State Query)
+
+Inspecionando as 40 entradas reais de `AdventureShop.Items`, as condições usadas em produção pelo próprio jogo são todas GSQ nativas, por exemplo:
+
+```
+MINE_LOWEST_LEVEL_REACHED 10
+MINE_LOWEST_LEVEL_REACHED 40
+MINE_LOWEST_LEVEL_REACHED 80
+PLAYER_HAS_MAIL Current galaxySword
+PLAYER_HAS_CRAFTING_RECIPE Current Explosive Ammo
+```
+
+`MINE_LOWEST_LEVEL_REACHED` foi confirmado como query real e registrada (`GameStateQuery.QueryTypeLookup`, 115 queries registradas no total, incluindo `LOCATION_IS_MINES` e `MINE_LOWEST_LEVEL_REACHED`). Nenhuma sintaxe foi inventada — a curva de progressão do Valley Armory (10 / 40 / 80) reaproveita exatamente os patamares já usados pelo próprio `AdventureShop` vanilla para armas/botas de força comparável.
+
+### Compatibilidade e isolamento de falhas
+
+`ShopData.Items` já vem populado com 40 entradas vanilla no `AdventureShop`; a edição do Valley Armory é estritamente aditiva (`.Add` na lista existente), nunca substitui a lista nem a loja. `ShopItemData.Id` é único apenas por convenção dentro da lista (não há checagem de unicidade no motor); o injetor do Valley Armory usa o próprio ID namespaced (`romulot.ValleyArmory_...`) como `Id`, evitando colisão com rótulos vanilla como `"ElfBlade"` ou `"WorkBoots"`.
+
+### Limitação observada
+
+Não foi possível (nem necessário) auditar `SynchronizedShopStock` em profundidade — ela trata sincronização de estoque compartilhado em multiplayer para lojas com estoque limitado; como o Valley Armory usa `AvailableStock = -1` (ilimitado) para todos os itens, esse mecanismo não é exercitado nesta fase.
+
+## Drops de monstro — Fase 7B (reauditoria)
+
+Auditoria feita via reflexão + disassembly manual de IL (mesma técnica das fases anteriores) sobre `Stardew Valley.dll` `1.6.15.24356`.
+
+### `Data/Monsters` continua no formato legado
+
+Ao contrário de `Data/Shops`/`Data/Shirts`/`Data/Weapons` (fortemente tipados em 1.6), `Data/Monsters` **continua** sendo `Dictionary<string, string>` com um registro posicional separado por `/` (confirmado carregando o asset real: 51 monstros). O campo de drops fica embutido nesse registro como pares `itemId chance` (ex.: `766 .75 766 .05 153 .1 ...`), usando IDs de objeto simples — não há como declarar ali um Qualified Item ID `(W)`/`(B)`/`(S)`. Por isso, o Valley Armory **não edita `Data/Monsters`** para adicionar seus próprios drops.
+
+### O ponto de extensão real: `Monster.getExtraDropItems()`
+
+Localizado o mecanismo correto por disassembly: `StardewValley.Monsters.Monster` tem um método virtual `getExtraDropItems()` (retorna `List<Item>`, corpo base = `return new List<Item>();`) que é chamado exatamente uma vez por `GameLocation.monsterDrop(Monster, int, int, Farmer)`, junto com `Monster.ModifyMonsterLoot(Debris)`. Os itens retornados por `getExtraDropItems()` são convertidos em `Debris` reais pelo próprio `monsterDrop` (confirmado no IL: `Item.getOne()` → `set_Stack` → `new Debris(...)`), ou seja, **basta adicionar itens à lista retornada** — o spawn físico, posição e comportamento de coleta são 100% delegados ao pipeline vanilla, sem necessidade de `Game1.createItemDebris` manual.
+
+Cinco subtipos (`Bat`, `BigSlime`, `Bug`, `Ghost`, `RockGolem`) sobrescrevem `getExtraDropItems()`, mas confirmado por IL que todos chamam `base.getExtraDropItems()` internamente antes de adicionar seus próprios itens especiais. Um único patch Harmony **postfix na implementação base** (`Monster.getExtraDropItems`) portanto se aplica a **todos os 51 monstros** de `Data/Monsters`, incluindo os 5 subtipos especiais — não foram necessários patches adicionais por subtipo.
+
+### Autoridade em multiplayer (confirmada, não assumida)
+
+Cadeia de chamadas real: `Monster.takeDamage(...)` → (dano aplicado) → `GameLocation.damageMonster(...)` → `GameLocation.onMonsterKilled(Farmer, Monster, Rectangle, bool)` → `GameLocation.monsterDrop(...)` → `Monster.getExtraDropItems()`. `damageMonster` é o método que processa o impacto do golpe do jogador e só é executado localmente pelo cliente cujo farmer desferiu o golpe (`onMonsterKilled` é chamado apenas nesse ponto da cadeia, não há chamada equivalente disparada a partir da sincronização de rede da vida do monstro). Ou seja: **a morte só é processada uma vez, pelo cliente do farmer atacante** — exatamente o mesmo modelo de autoridade que o próprio jogo já usa para os drops especiais de Ghost/Bat/Bug/RockGolem/BigSlime. Como o Valley Armory usa o mesmo ponto de extensão, herda essa garantia automaticamente, sem precisar de nenhuma checagem adicional tipo `Context.IsMainPlayer`.
+
+### RNG confirmado
+
+Disassembly de `Ghost.getExtraDropItems()` (um dos 5 overrides vanilla) mostra `Game1.random.NextDouble()` como fonte de aleatoriedade para decidir o drop especial — não uma seed própria nem `new Random()`. O Valley Armory usa exatamente a mesma fonte (`Game1.random`), replicando o padrão já usado pelo próprio jogo para este mecanismo.
+
+### Identificador do monstro
+
+`Monster.Name` (propriedade `string`) é a mesma string usada como chave em `Data/Monsters` e é o valor passado para `Stats.monsterKilled(name)` na contagem de mortes (confirmado no IL de `onMonsterKilled`) — é o identificador "interno" correto para o campo `SourceId`, não o nome visual/traduzido. Centralizado em `MonsterIdentifiers` (`src/Acquisition/MonsterIdentifiers.cs`).
+
+### `GameStateQuery.CheckConditions` reaproveitada
+
+Assinatura real confirmada: `GameStateQuery.CheckConditions(string query, GameLocation location, Farmer player, Item targetItem, Item inputItem, Random random, HashSet<string> ignoreQueryKeys)`. O Valley Armory reaproveita a mesma condição `MINE_LOWEST_LEVEL_REACHED` já usada na Fase 7A para a loja, chamando essa API diretamente (já que, ao contrário do Shop, o drop não é avaliado nativamente pelo motor — é o próprio código do mod que decide se o item cai).
+
 ## Limitações
 
 - A auditoria foi estática; o jogo não foi iniciado.
@@ -456,3 +617,4 @@ Raridade jamais aplicará multiplicadores automáticos. Todo atributo efetivo se
 - Nenhum cenário multiplayer ou split-screen foi executado.
 - A ordem entre patches Harmony de outros mods não pode ser garantida sem uma matriz concreta de compatibilidade.
 - Os métodos e campos confirmados são APIs públicas em termos de visibilidade CLR, mas pertencem ao código do jogo, não a uma garantia de estabilidade do SMAPI.
+- A autoridade de multiplayer para `getExtraDropItems()` foi confirmada via análise estática da cadeia de chamadas (IL), não observada em uma sessão multiplayer real.

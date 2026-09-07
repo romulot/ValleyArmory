@@ -7,33 +7,37 @@ namespace ValleyArmory.Tests;
 public sealed class DeveloperToolsTests
 {
     [Fact]
-    public void DeveloperEquipmentCatalogContainsExactlyTenEquipmentInCanonicalOrder()
+    public void DeveloperEquipmentCatalogContainsExactlyThirteenEquipmentInCanonicalOrder()
     {
         DeveloperEquipmentCatalog catalog = CreateCatalog();
 
-        Assert.Equal(10, catalog.Entries.Count);
+        Assert.Equal(13, catalog.Entries.Count);
         Assert.Equal(
             new[]
             {
                 "miners-blade", "black-iron-sword", "prismatic-blade", "shadow-fang", "moon-dagger", "stonebreaker", "abyss-hammer",
-                "miners-boots", "obsidian-boots", "ethereal-boots"
+                "miners-boots", "obsidian-boots", "ethereal-boots",
+                "miners-armor", "obsidian-armor", "ethereal-armor"
             },
             catalog.Entries.Select(entry => entry.Alias)
         );
     }
 
     [Fact]
-    public void WeaponsResolveWithWQualifierAndBootsWithBQualifier()
+    public void WeaponsBootsAndArmorResolveWithExpectedQualifiers()
     {
         DeveloperEquipmentCatalog catalog = CreateCatalog();
 
-        DeveloperEquipmentEntry[] weapons = catalog.Entries.Where(entry => entry.Definition.Type != EquipmentType.Boots).ToArray();
+        DeveloperEquipmentEntry[] weapons = catalog.Entries.Where(entry => entry.Definition.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer).ToArray();
         DeveloperEquipmentEntry[] boots = catalog.Entries.Where(entry => entry.Definition.Type == EquipmentType.Boots).ToArray();
+        DeveloperEquipmentEntry[] armor = catalog.Entries.Where(entry => entry.Definition.Type == EquipmentType.Shirt).ToArray();
 
         Assert.Equal(7, weapons.Length);
         Assert.Equal(3, boots.Length);
+        Assert.Equal(3, armor.Length);
         Assert.All(weapons, entry => Assert.StartsWith("(W)", entry.QualifiedItemId, StringComparison.Ordinal));
         Assert.All(boots, entry => Assert.StartsWith("(B)", entry.QualifiedItemId, StringComparison.Ordinal));
+        Assert.All(armor, entry => Assert.StartsWith("(S)", entry.QualifiedItemId, StringComparison.Ordinal));
     }
 
     [Theory]
@@ -47,6 +51,9 @@ public sealed class DeveloperToolsTests
     [InlineData("miners-boots", "(B)romulot.ValleyArmory_MinersBoots")]
     [InlineData("obsidian-boots", "(B)romulot.ValleyArmory_ObsidianBoots")]
     [InlineData("ethereal-boots", "(B)romulot.ValleyArmory_EtherealBoots")]
+    [InlineData("miners-armor", "(S)romulot.ValleyArmory_MinersArmor")]
+    [InlineData("obsidian-armor", "(S)romulot.ValleyArmory_ObsidianArmor")]
+    [InlineData("ethereal-armor", "(S)romulot.ValleyArmory_EtherealArmor")]
     public void AliasResolvesExpectedQualifiedItemId(string alias, string qualifiedItemId)
     {
         Assert.True(CreateCatalog().TryResolve(alias, out DeveloperEquipmentEntry? entry));
@@ -60,11 +67,12 @@ public sealed class DeveloperToolsTests
 
         Assert.True(catalog.TryResolve("MINERS-BLADE", out _));
         Assert.True(catalog.TryResolve("MINERS-BOOTS", out _));
+        Assert.True(catalog.TryResolve("MINERS-ARMOR", out _));
         Assert.False(catalog.TryResolve("unknown-equipment", out _));
     }
 
     [Fact]
-    public void AllTenAliasesAreUnique()
+    public void AllThirteenAliasesAreUnique()
     {
         DeveloperEquipmentCatalog catalog = CreateCatalog();
 
@@ -77,6 +85,7 @@ public sealed class DeveloperToolsTests
         Assert.Equal("black-iron-sword", DeveloperEquipmentCatalog.ToAlias("romulot.ValleyArmory_BlackIronSword"));
         Assert.Equal("abyss-hammer", DeveloperEquipmentCatalog.ToAlias("romulot.ValleyArmory_AbyssHammer"));
         Assert.Equal("obsidian-boots", DeveloperEquipmentCatalog.ToAlias("romulot.ValleyArmory_ObsidianBoots"));
+        Assert.Equal("ethereal-armor", DeveloperEquipmentCatalog.ToAlias("romulot.ValleyArmory_EtherealArmor"));
     }
 
     private static DeveloperEquipmentCatalog CreateCatalog()

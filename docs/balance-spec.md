@@ -118,3 +118,30 @@ uma escolha de identidade visual, não de balanceamento: Miner's Boots usa 3
 (Work Boots), Obsidian Boots usa 7 (Dark Boots), Ethereal Boots usa 9 (Genie
 Shoes). Ver `docs/vertical-slice.md` (seção Fase 6B) para a limitação
 deliberada de não ter uma textura de recolor customizada nesta fase.
+
+## Nota de fechamento — Fase 6C (armaduras)
+
+As três armaduras (Miner's Armor, Obsidian Armor, Ethereal Armor) foram
+adicionadas como `Shirt` (`Data/Shirts`), sem `Defense`/`Immunity`/nenhum
+stat de combate — `ShirtData` não tem esses campos, e nenhum patch Harmony
+foi criado para simulá-los nesta fase. Os preços (350g/850g/2100g) seguem a
+mesma lógica já usada para armas e botas: valor explícito por item,
+informado por raridade e por preços vanilla comparáveis de shirts (a maioria
+das 303 entradas vanilla fica abaixo de 50g; nossos valores refletem o
+material "reforçado"/"élfico" da identidade do mod, não uma tradução literal
+do preço vanilla). Continua provisório até playtest mais amplo, e sem
+qualquer multiplicador automático por raridade.
+
+## Nota de fechamento — Fase 7A (aquisição via loja)
+
+Os preços de `stats.price` de todos os 13 equipamentos (incluindo os das
+armaduras da Fase 6C: 350g/850g/2100g) foram reauditados nesta fase como
+candidatos a preço de venda na Adventurer's Guild (`AdventureShop`) e
+considerados razoáveis — nenhum valor foi alterado. O `stats.price` agora é
+reaproveitado diretamente como o `Price` da entrada de loja (`ShopItemData`),
+sem um campo duplicado. Condição de progressão usada:
+`MINE_LOWEST_LEVEL_REACHED` em 10/40/80 conforme raridade (Common/Rare/
+Epic), reproduzindo patamares já usados pelo próprio `AdventureShop`
+vanilla para itens de força comparável (ver `docs/signature-audit.md` e
+`docs/vertical-slice.md`, seção Fase 7A). `Prismatic Blade` (Legendary)
+permanece fora da loja por decisão de design, não por limitação técnica.

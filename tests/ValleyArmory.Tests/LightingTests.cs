@@ -54,6 +54,18 @@ public sealed class LightingTests
         Assert.Equal(default, appearance);
     }
 
+    [Theory]
+    [InlineData("(S)romulot.ValleyArmory_MinersArmor")]
+    [InlineData("(S)romulot.ValleyArmory_ObsidianArmor")]
+    [InlineData("(S)romulot.ValleyArmory_EtherealArmor")]
+    public void NoArmorEverResolvesLightRegardlessOfRarity(string qualifiedItemId)
+    {
+        bool found = CreateResolver().TryResolve(qualifiedItemId, out WeaponLightAppearance appearance);
+
+        Assert.False(found);
+        Assert.Equal(default, appearance);
+    }
+
     [Fact]
     public void RuntimeLightColorsIncreaseInLuminanceWithRarityWithoutApproachingWhite()
     {

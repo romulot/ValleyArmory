@@ -42,7 +42,8 @@ internal enum EquipmentType
     Sword,
     Dagger,
     Hammer,
-    Boots
+    Boots,
+    Shirt
 }
 
 internal enum WeaponBehavior
@@ -80,9 +81,35 @@ internal sealed class EquipmentStats
 
 internal sealed class AcquisitionMetadata
 {
-    public string Method { get; init; } = string.Empty;
-
     public string? Notes { get; init; }
+
+    public ShopAcquisition? Shop { get; init; }
+
+    public DropAcquisition? Drop { get; init; }
+}
+
+internal sealed class ShopAcquisition
+{
+    public string ShopId { get; init; } = string.Empty;
+
+    public string? Condition { get; init; }
+}
+
+internal sealed class DropAcquisition
+{
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DropSourceType? SourceType { get; init; }
+
+    public string SourceId { get; init; } = string.Empty;
+
+    public double Chance { get; init; }
+
+    public string? Condition { get; init; }
+}
+
+internal enum DropSourceType
+{
+    Monster
 }
 
 internal sealed class SpriteReference

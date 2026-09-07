@@ -24,7 +24,7 @@ internal sealed class TooltipPresentationResolver
         if (qualifiedItemId is null
             || !this.catalog.TryGetByQualifiedId(qualifiedItemId, out EquipmentDefinition? equipment)
             || equipment is null
-            || equipment.Type is not (EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer or EquipmentType.Boots)
+            || equipment.Type is not (EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer or EquipmentType.Boots or EquipmentType.Shirt)
             || !this.catalog.TryGetRarity(equipment.Rarity, out RarityDefinition? rarity)
             || rarity is null)
         {

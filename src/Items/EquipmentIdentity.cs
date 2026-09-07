@@ -9,6 +9,7 @@ internal static class EquipmentIdentity
         string typePrefix = equipment.Type switch
         {
             EquipmentType.Boots => "(B)",
+            EquipmentType.Shirt => "(S)",
             EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer => "(W)",
             _ => throw new ArgumentException($"Equipment '{equipment.Id}' has no valid type.", nameof(equipment))
         };

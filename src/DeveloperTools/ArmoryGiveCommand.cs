@@ -59,7 +59,7 @@ internal sealed class ArmoryGiveCommand
             return;
         }
 
-        if (item is not (MeleeWeapon or Boots) || !string.Equals(item.QualifiedItemId, entry.QualifiedItemId, StringComparison.Ordinal))
+        if (item is not (MeleeWeapon or Boots or Clothing) || !string.Equals(item.QualifiedItemId, entry.QualifiedItemId, StringComparison.Ordinal))
         {
             this.monitor.Log($"ItemRegistry did not create the expected equipment '{entry.QualifiedItemId}'.", LogLevel.Warn);
             this.ShowMessage("command.va-give.creation-failed", isError: true);

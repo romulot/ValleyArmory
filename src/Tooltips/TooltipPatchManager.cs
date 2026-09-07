@@ -42,12 +42,20 @@ internal sealed class TooltipPatchManager
             MethodInfo bootsDraw = AccessTools.Method(typeof(Boots), nameof(Boots.drawTooltip),
                 new[] { typeof(SpriteBatch), typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(SpriteFont), typeof(float), typeof(StringBuilder) })
                 ?? throw new MissingMethodException("Boots.drawTooltip was not found.");
+            MethodInfo clothingMeasure = AccessTools.Method(typeof(Item), nameof(Item.getExtraSpaceNeededForTooltipSpecialIcons),
+                new[] { typeof(SpriteFont), typeof(int), typeof(int), typeof(int), typeof(StringBuilder), typeof(string), typeof(int) })
+                ?? throw new MissingMethodException("Item.getExtraSpaceNeededForTooltipSpecialIcons was not found.");
+            MethodInfo clothingDraw = AccessTools.Method(typeof(Item), nameof(Item.drawTooltip),
+                new[] { typeof(SpriteBatch), typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(SpriteFont), typeof(float), typeof(StringBuilder) })
+                ?? throw new MissingMethodException("Item.drawTooltip was not found.");
 
             LogTargetMethod("title-color", hoverText);
             LogTargetMethod("extra-space", measure);
             LogTargetMethod("draw-tooltip", draw);
             LogTargetMethod("boots-extra-space", bootsMeasure);
             LogTargetMethod("boots-draw-tooltip", bootsDraw);
+            LogTargetMethod("clothing-extra-space", clothingMeasure);
+            LogTargetMethod("clothing-draw-tooltip", clothingDraw);
 
             ApplyPatch("title-color", () => this.harmony.Patch(
                 hoverText,
@@ -69,13 +77,23 @@ internal sealed class TooltipPatchManager
                 bootsDraw,
                 prefix: new HarmonyMethod(typeof(BootsTooltipPatches), nameof(BootsTooltipPatches.DrawPrefix))));
 
+            ApplyPatch("clothing-extra-space", () => this.harmony.Patch(
+                clothingMeasure,
+                postfix: new HarmonyMethod(typeof(ClothingTooltipPatches), nameof(ClothingTooltipPatches.MeasurePostfix))));
+
+            ApplyPatch("clothing-draw-tooltip", () => this.harmony.Patch(
+                clothingDraw,
+                prefix: new HarmonyMethod(typeof(ClothingTooltipPatches), nameof(ClothingTooltipPatches.DrawPrefix))));
+
             TooltipPatchContext.Trace("Tooltip decoration manager enabled");
             LogPatchOwners("IClickableMenu.drawHoverText(StringBuilder,...)", hoverText);
             LogPatchOwners("MeleeWeapon.getExtraSpaceNeededForTooltipSpecialIcons", measure);
             LogPatchOwners("MeleeWeapon.drawTooltip", draw);
             LogPatchOwners("Boots.getExtraSpaceNeededForTooltipSpecialIcons", bootsMeasure);
             LogPatchOwners("Boots.drawTooltip", bootsDraw);
-            this.monitor.Log("Weapon and boots tooltip rarity decoration enabled.", LogLevel.Debug);
+            LogPatchOwners("Item.getExtraSpaceNeededForTooltipSpecialIcons", clothingMeasure);
+            LogPatchOwners("Item.drawTooltip", clothingDraw);
+            this.monitor.Log("Weapon, boots and armor tooltip rarity decoration enabled.", LogLevel.Debug);
             return true;
         }
         catch (Exception exception)

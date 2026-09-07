@@ -19,6 +19,9 @@ public sealed class TooltipPresentationTests
         yield return new object[] { "(B)romulot.ValleyArmory_MinersBoots", "Common", "Rarity: Common" };
         yield return new object[] { "(B)romulot.ValleyArmory_ObsidianBoots", "Rare", "Rarity: Rare" };
         yield return new object[] { "(B)romulot.ValleyArmory_EtherealBoots", "Epic", "Rarity: Epic" };
+        yield return new object[] { "(S)romulot.ValleyArmory_MinersArmor", "Common", "Rarity: Common" };
+        yield return new object[] { "(S)romulot.ValleyArmory_ObsidianArmor", "Rare", "Rarity: Rare" };
+        yield return new object[] { "(S)romulot.ValleyArmory_EtherealArmor", "Epic", "Rarity: Epic" };
     }
 
     [Theory]
@@ -60,8 +63,10 @@ public sealed class TooltipPresentationTests
     [Theory]
     [InlineData("(W)0")]
     [InlineData("(B)0")]
+    [InlineData("(S)0")]
     [InlineData("(W)other.mod_Sword")]
     [InlineData("(B)other.mod_Boots")]
+    [InlineData("(S)other.mod_Shirt")]
     [InlineData(null)]
     public void ExternalAndUnknownItemsRemainVanilla(string? qualifiedItemId)
     {
@@ -86,6 +91,30 @@ public sealed class TooltipPresentationTests
     {
         bool found = CreateResolver().TryResolve(
             "(B)romulot.ValleyArmory_MinersBoots",
+            key => "Rarity: Common",
+            out TooltipPresentation? presentation
+        );
+
+        Assert.True(found);
+        Assert.Null(presentation!.NameColor);
+        Assert.Equal("Rarity: Common", presentation.RarityText);
+    }
+
+    [Fact]
+    public void RareArmorSharesTheSameCatalogColorAsRareWeaponsAndBoots()
+    {
+        TooltipPresentationResolver resolver = CreateResolver();
+        resolver.TryResolve("(W)romulot.ValleyArmory_MinersBlade", key => key, out TooltipPresentation? minersBlade);
+        resolver.TryResolve("(S)romulot.ValleyArmory_ObsidianArmor", key => key, out TooltipPresentation? obsidianArmor);
+
+        Assert.Equal(minersBlade!.NameColor, obsidianArmor!.NameColor);
+    }
+
+    [Fact]
+    public void CommonArmorKeepsVanillaTitleColorButShowsRarityLine()
+    {
+        bool found = CreateResolver().TryResolve(
+            "(S)romulot.ValleyArmory_MinersArmor",
             key => "Rarity: Common",
             out TooltipPresentation? presentation
         );

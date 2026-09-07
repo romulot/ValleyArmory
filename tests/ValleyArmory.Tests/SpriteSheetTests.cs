@@ -114,6 +114,68 @@ public sealed class SpriteSheetTests
         Assert.All(boots, boot => Assert.Equal(BootAssetInjector.BootTextureAssetName, boot.Sprite!.AssetName));
     }
 
+    [Fact]
+    public void ArmorSpritesheetMatchesTheRealShirtSourceRectFormula()
+    {
+        // Confirmed by disassembling StardewValley.ItemTypeDefinitions.ShirtDataDefinition.GetSourceRect
+        // in the installed 1.6.15.24356 assembly: columns = texture.Width / 2; each icon is 8x8 at
+        // x = (spriteIndex * 8) % columns, y = (spriteIndex * 8 / columns) * 32.
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "armor.png");
+        PngImage image = ReadRgbaPng(path);
+
+        Assert.Equal(48, image.Width);
+        Assert.Equal(32, image.Height);
+
+        int columns = image.Width / 2;
+        for (int spriteIndex = 0; spriteIndex < 3; spriteIndex++)
+        {
+            int x = spriteIndex * 8 % columns;
+            int y = spriteIndex * 8 / columns * 32;
+
+            bool occupied = false;
+            for (int dy = 0; dy < 8; dy++)
+            {
+                for (int dx = 0; dx < 8; dx++)
+                {
+                    if (image.Alpha[y + dy, x + dx] != 0)
+                        occupied = true;
+                }
+            }
+
+            Assert.True(occupied, $"Armor icon at spriteIndex {spriteIndex} (rect {x},{y},8,8) is empty.");
+        }
+    }
+
+    [Fact]
+    public void ArmorSpriteCellsStayOpaqueOrFullyTransparent()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "armor.png");
+        PngImage image = ReadRgbaPng(path);
+
+        for (int y = 0; y < image.Height; y++)
+        {
+            for (int x = 0; x < image.Width; x++)
+            {
+                byte alpha = image.Alpha[y, x];
+                Assert.True(alpha == 0 || alpha == 255, $"Pixel ({x},{y}) has partial alpha {alpha}, which indicates anti-aliasing.");
+            }
+        }
+    }
+
+    [Fact]
+    public void ArmorDefinitionsUseUniqueIndicesZeroThroughTwoAndSharedTexture()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "armory.json");
+        ArmoryCatalog catalog = new ArmoryCatalogLoader(new ArmoryCatalogValidator()).Load(path);
+        EquipmentDefinition[] armor = catalog.Equipment
+            .Where(item => item.Type is EquipmentType.Shirt)
+            .ToArray();
+
+        Assert.Equal(3, armor.Length);
+        Assert.Equal(Enumerable.Range(0, 3), armor.Select(item => item.Sprite!.SpriteIndex).OrderBy(index => index));
+        Assert.All(armor, item => Assert.Equal(ArmorAssetInjector.ArmorTextureAssetName, item.Sprite!.AssetName));
+    }
+
     private static PngImage ReadRgbaPng(string path)
     {
         byte[] bytes = File.ReadAllBytes(path);

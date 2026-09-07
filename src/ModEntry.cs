@@ -1,5 +1,6 @@
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
+using ValleyArmory.Acquisition;
 using ValleyArmory.Assets;
 using ValleyArmory.Catalog;
 using ValleyArmory.DeveloperTools;
@@ -37,7 +38,15 @@ internal sealed class ModEntry : Mod
         BootAssetInjector bootAssetInjector = new(catalogIndex, helper.Translation, this.Monitor);
         helper.Events.Content.AssetRequested += bootAssetInjector.OnAssetRequested;
 
+        ArmorAssetInjector armorAssetInjector = new(catalogIndex, helper.Translation, this.Monitor);
+        helper.Events.Content.AssetRequested += armorAssetInjector.OnAssetRequested;
+
+        ShopAcquisitionInjector shopAcquisitionInjector = new(catalogIndex, this.Monitor);
+        helper.Events.Content.AssetRequested += shopAcquisitionInjector.OnAssetRequested;
+
         new ArmoryGiveCommand(catalogIndex, helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
+
+        _ = new DropPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(new DropRuleResolver(catalogIndex));
 
         _ = new TooltipPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(
             new TooltipPresentationResolver(catalogIndex),

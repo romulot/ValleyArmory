@@ -16,9 +16,9 @@ internal sealed class DeveloperEquipmentCatalog
     public DeveloperEquipmentCatalog(CatalogIndex catalog)
     {
         this.entries = catalog.GetAllEquipment()
-            .Where(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer or EquipmentType.Boots)
+            .Where(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer or EquipmentType.Boots or EquipmentType.Shirt)
             .Select(item => new DeveloperEquipmentEntry(ToAlias(item.Id), item))
-            .OrderBy(entry => entry.Definition.Type is EquipmentType.Boots ? 1 : 0)
+            .OrderBy(entry => TypeOrder(entry.Definition.Type))
             .ThenBy(entry => entry.Definition.Sprite!.SpriteIndex)
             .ThenBy(entry => entry.Definition.Id, StringComparer.Ordinal)
             .ToArray();
@@ -35,6 +35,16 @@ internal sealed class DeveloperEquipmentCatalog
     public bool TryResolve(string alias, out DeveloperEquipmentEntry? entry)
     {
         return this.byAlias.TryGetValue(alias, out entry);
+    }
+
+    private static int TypeOrder(EquipmentType? type)
+    {
+        return type switch
+        {
+            EquipmentType.Boots => 1,
+            EquipmentType.Shirt => 2,
+            _ => 0
+        };
     }
 
     internal static string ToAlias(string itemId)
