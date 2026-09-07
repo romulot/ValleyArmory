@@ -197,3 +197,33 @@ permanece disponível.
 
 Essa dependência de IL corresponde ao assembly `1.6.15.24356` e precisa ser
 revalidada em atualizações do jogo.
+
+## Fase 5 — iluminação da Miner's Blade (single-player)
+
+Decisões arquiteturais aprovadas para esta etapa:
+
+- Escopo: somente `(W)romulot.ValleyArmory_MinersBlade` pode emitir luz.
+- Fonte de verdade da luz: `GameLocation.sharedLights`.
+- `Game1.currentLightSources` é tratado como cache interno do jogo e não é
+  manipulado diretamente pelo mod.
+- Precedência visual: `Equipment override ?? RarityDefinition.Light ?? disabled`.
+- A aparência da luz (`color`, `radius`, `intensity`, `offset`) vem do catálogo;
+  o controlador não hardcodeia valores de raridade.
+- No máximo uma luz própria ativa para o jogador local, com ID determinístico e
+  namespaced por `UniqueMultiplayerID`.
+- Reconciliação idempotente: cria apenas quando necessário, reposiciona/atualiza
+  por diferença e remove imediatamente ao perder elegibilidade.
+- Fallback isolado: qualquer falha desativa somente o subsistema de iluminação,
+  limpa luzes próprias remanescentes e mantém arma/tooltip funcionando.
+
+Eventos de ciclo de vida cobertos nesta fase (single-player):
+
+- `SaveLoaded`
+- `DayStarted`
+- `DayEnding`
+- `ReturnedToTitle`
+- `UpdateTicked`
+- `Player.Warped`
+
+Pass-out/morte são cobertos indiretamente por `DayEnding` e pela reconciliação
+contínua de estado local no `UpdateTicked`.
