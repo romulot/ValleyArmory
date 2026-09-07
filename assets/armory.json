@@ -138,7 +138,11 @@
         "price": 6500
       },
       "acquisition": {
-        "notes": "Legendary sidegrade; deliberately not sold in any shop and not a monster drop this phase. See docs/vertical-slice.md (Fase 7A/7B)."
+        "notes": "Legendary sidegrade; deliberately not sold in any shop, not a monster drop, and not craftable. See docs/vertical-slice.md (Fase 7A/7B/7C/7D).",
+        "quest": {
+          "questId": "romulot.ValleyArmory_PrismaticTrial",
+          "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 120"
+        }
       },
       "sprite": {
         "assetName": "Mods/romulot.ValleyArmory/Weapons",

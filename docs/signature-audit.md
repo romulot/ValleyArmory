@@ -634,6 +634,34 @@ Confirmado tipo real `StardewValley.GameData.TriggerActionData` (asset `Data/Tri
 
 Ingredientes usam IDs de objeto simples (sem qualificador), exatamente como no vanilla (`334`=Copper Bar, `335`=Iron Bar, `382`=Coal, `343`=Stone, `337`=Iridium Bar, `848`=Cinder Shard, `768`=Solar Essence, `769`=Void Essence, `910`=Radioactive Bar — todos confirmados via `Data/Objects` real, não memória).
 
+## Quest / Reward — Fase 7D (reauditoria)
+
+Auditoria feita por reflexão + disassembly manual de IL sobre `Stardew Valley.dll` `1.6.15.24356`, com foco no ponto crítico: como conceder um item custom (não-Object) como recompensa de progressão, de forma persistente e sem duplicação.
+
+### `Data/Quests` (legado) vs `Data/SpecialOrders` (tipado)
+
+`Data/Quests` continua `Dictionary<string,string>` legado (66 entradas reais). `Data/SpecialOrders` já é **tipado** em 1.6 (`Dictionary<string, SpecialOrderData>`, 33 entradas reais), com `Objectives`/`Rewards` como listas de `{Type, Data: Dictionary<string,string>}` — muito mais adequado para uma quest custom data-driven, com `Condition` (GSQ) nativo para gating.
+
+### Ponto crítico: `ObjectReward` NÃO serve para o output
+
+Disassembly de `ObjectReward.Grant()` confirma que ele constrói `new StardewValley.Object(itemKey, amount, false, -1, 0)` **diretamente**, não via `ItemRegistry.Create` — ou seja, só produz objetos da categoria `(O)`, nunca um Weapon/Boots/Shirt. Isso descarta `Reward Type="Object"` para a Prismatic Blade.
+
+### Solução real confirmada: `%item id <QualifiedItemId>` em `Data/mail`
+
+Disassembly de `LetterViewerMenu.HandleItemCommand` confirma o parser do comando `%item id <id> <quantidade> %%` de cartas: para o subtipo `"id"`, o id é passado **diretamente** para `ItemRegistry.Create` — aceita qualquer Qualified Item ID, incluindo os do Valley Armory. Formato real confirmado em `Data/mail` (ex.: `Robin = "...%item id (O)388 50 %%[#]A Gift From Robin"`). A cadeia de recompensa usada: `SpecialOrder` completo → `Reward Type="Mail"` (`MailReceived=<id>`) → `Data/mail[<id>]` com `%item id (W)... 1 %%[#]Título`.
+
+### Ativação: `Data/TriggerActions` + `AddSpecialOrder` (mesmo padrão da Fase 7C)
+
+`TriggerActionManager.DefaultActions` expõe `AddSpecialOrder`, que chama `FarmerTeam.AddSpecialOrder(id, ...)` diretamente. Disassembly desse método confirma **idempotência nativa**: primeiro verifica `specialOrders.Any(o => o.id == id)` (já ativa? não faz nada); depois verifica `completedSpecialOrders.Contains(order.questKey) && !Repeatable` (já concluída e não repetível? não faz nada). Ou seja, **repetir a ação todo dia é seguro por design** — nenhuma checagem extra de duplicação foi necessária no código do mod.
+
+### Multiplayer: Special Order é por-equipe; recompensa por Mail é broadcast
+
+`FarmerTeam.specialOrders`/`completedSpecialOrders` são campos de **equipe** (`NetList`/`NetStringHashSet` em `FarmerTeam`, não em `Farmer`) — a quest é compartilhada pelo grupo todo. Disassembly de `MailReward.Grant()` confirma que ele chama `Game1.addMail(...)`, o mecanismo vanilla de **broadcast de correspondência para todos os jogadores conectados** (mesmo usado para correspondências de aniversário/festival). Decisão de design: ao concluir a Prismatic Trial, **toda a equipe recebe a carta e sua própria Prismatic Blade** — não só quem entregou o golpe final. Documentado explicitamente, não deixado ambíguo.
+
+### `SpecialOrder` real usada como precedente temático
+
+A entrada vanilla `Wizard2` já é uma Special Order com objetivo `Slay` de 1 "Prismatic Slime" + entrega de "Prismatic Jelly" — confirma que o próprio jogo já usa o tema prismático em Special Orders, reforçando a coerência de usar esse mesmo sistema para a Prismatic Blade.
+
 ## Limitações
 
 - A auditoria foi estática; o jogo não foi iniciado.
@@ -643,3 +671,4 @@ Ingredientes usam IDs de objeto simples (sem qualificador), exatamente como no v
 - Os métodos e campos confirmados são APIs públicas em termos de visibilidade CLR, mas pertencem ao código do jogo, não a uma garantia de estabilidade do SMAPI.
 - A autoridade de multiplayer para `getExtraDropItems()` foi confirmada via análise estática da cadeia de chamadas (IL), não observada em uma sessão multiplayer real.
 - A autoridade por-jogador de `Data/TriggerActions`/`MarkCraftingRecipeKnown` foi confirmada por `HostOnly=False` nas entradas vanilla e pela assinatura de `RequestSetSimpleFlag`, não observada em uma sessão multiplayer real.
+- O comportamento de broadcast de `Game1.addMail`/idempotência de `FarmerTeam.AddSpecialOrder` foi confirmado por análise estática de IL, não observado em uma sessão multiplayer real.

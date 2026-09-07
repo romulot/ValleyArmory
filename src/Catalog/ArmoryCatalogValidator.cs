@@ -362,6 +362,24 @@ internal sealed class ArmoryCatalogValidator
         {
             this.ValidateCraftingAcquisition(acquisition.Crafting, field, errors);
         }
+
+        if (acquisition.Quest is not null)
+        {
+            this.ValidateQuestAcquisition(acquisition.Quest, field, errors);
+        }
+    }
+
+    private void ValidateQuestAcquisition(QuestAcquisition quest, string field, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(quest.QuestId))
+        {
+            errors.Add($"{field}.acquisition.quest.questId: value is required.");
+        }
+
+        if (quest.UnlockCondition is not null && string.IsNullOrWhiteSpace(quest.UnlockCondition))
+        {
+            errors.Add($"{field}.acquisition.quest.unlockCondition: must not be blank when present.");
+        }
     }
 
     private void ValidateShopAcquisition(EquipmentDefinition item, ShopAcquisition shop, string field, List<string> errors)

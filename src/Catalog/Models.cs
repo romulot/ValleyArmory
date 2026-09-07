@@ -88,6 +88,8 @@ internal sealed class AcquisitionMetadata
     public DropAcquisition? Drop { get; init; }
 
     public CraftingAcquisition? Crafting { get; init; }
+
+    public QuestAcquisition? Quest { get; init; }
 }
 
 internal sealed class ShopAcquisition
@@ -117,6 +119,13 @@ internal enum DropSourceType
 internal sealed class CraftingAcquisition
 {
     public IReadOnlyList<CraftingIngredient> Ingredients { get; init; } = Array.Empty<CraftingIngredient>();
+
+    public string? UnlockCondition { get; init; }
+}
+
+internal sealed class QuestAcquisition
+{
+    public string QuestId { get; init; } = string.Empty;
 
     public string? UnlockCondition { get; init; }
 }

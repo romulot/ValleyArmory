@@ -912,6 +912,115 @@ continua conhecida; confirmar que Shop e Drop continuam funcionando sem
 regressão; multiplayer/split-screen (receita conhecida por jogador
 diferente) não testado manualmente.
 
-Próximo passo sugerido: **Fase 7D** (Quest ou Reward — únicas fontes de
-`AcquisitionMetadata` ainda sem implementação real; Prismatic Blade é a
-candidata natural).
+Próximo passo sugerido logo após a Fase 7C: Quest/Reward para a Prismatic
+Blade (concluído como **Fase 7D**, ver abaixo).
+
+## Fase 7D — aquisição via Quest / Reward (Prismatic Blade)
+
+### Decisão técnica
+
+`Data/SpecialOrders` (tipado em 1.6, `Dictionary<string, SpecialOrderData>`)
+foi escolhido em vez do sistema legado `Data/Quests` — tem `Condition` (GSQ)
+nativo, `Objectives`/`Rewards` estruturados, e é o mecanismo por-**equipe**
+que o próprio jogo usa para conteúdo endgame (Qi Challenges, pedidos de
+NPCs). O ponto crítico da fase — como conceder um item custom como
+recompensa — foi resolvido por disassembly: `Reward Type="Object"`
+constrói `StardewValley.Object` diretamente (não serve para uma arma), mas
+o parser de correspondência (`LetterViewerMenu.HandleItemCommand`) resolve
+o comando `%item id <QualifiedItemId> %%` via `ItemRegistry.Create` —
+aceita qualquer item, incluindo os do Valley Armory. A cadeia final:
+Special Order completa → `Reward Type="Mail"` → `Data/mail` com anexo
+`%item id (W)...PrismaticBlade 1 %%`. Nenhum Harmony foi necessário.
+Detalhes completos em `docs/signature-audit.md` (seção "Quest / Reward —
+Fase 7D").
+
+Ativação da quest reaproveita **exatamente** o mesmo padrão de
+`Data/TriggerActions` da Fase 7C (`Trigger=DayStarted`, `Condition=GSQ`),
+trocando apenas a ação por `AddSpecialOrder <questId>`. `FarmerTeam.
+AddSpecialOrder` já é idempotente por design (confirmado por disassembly:
+não faz nada se já ativa, e não faz nada se já concluída e não repetível)
+— repetir a ação todo dia é seguro, sem necessidade de guarda extra no mod.
+
+### Multiplayer — decisão explícita, não ambígua
+
+Special Orders são **por-equipe** (`FarmerTeam.specialOrders`/
+`completedSpecialOrders`), não por-jogador. `MailReward.Grant()` usa
+`Game1.addMail(...)`, o broadcast vanilla de correspondência para **todos**
+os jogadores conectados. Decisão: ao concluir a Prismatic Trial, **cada
+membro da equipe recebe sua própria carta e sua própria Prismatic Blade**
+— não apenas quem desferiu o golpe final. Isso evita duplicação (mail é
+por-farmer, `mailReceived` não deixa reabrir a mesma recompensa duas vezes)
+e trata a conquista como um marco do grupo, coerente com o próprio
+comportamento vanilla de Special Orders.
+
+### Arquitetura
+
+```
+EquipmentDefinition.Acquisition.Quest (QuestId, UnlockCondition?)
+        ↓
+QuestUnlockInjector.BuildTriggerAction     SpecialOrderInjector.BuildSpecialOrder     QuestMailInjector.BuildLetter
+        ↓                                          ↓                                          ↓
+Data/TriggerActions                        Data/SpecialOrders                        Data/mail
+{Trigger=DayStarted,                       {Requester=Marlon,                        "<corpo traduzido> %item id
+ Condition,                                 Objectives=[Slay 15                       (W)...PrismaticBlade 1 %%
+ Action="AddSpecialOrder                    Iridium Golem],                          [#]<título traduzido>"
+ romulot.ValleyArmory_PrismaticTrial"}      Rewards=[Mail →
+                                             PrismaticTrialReward]}
+```
+
+`QuestBlueprints` (novo, `src/Acquisition/QuestBlueprints.cs`) centraliza o
+conteúdo específico de cada quest (requester, objetivo, chaves de
+tradução) por `QuestId` — não por identidade de equipamento — para que uma
+futura segunda quest só exija um novo registro no dicionário, sem
+qualquer branch por item.
+
+### Quest
+
+```
+Nome (i18n): Prismatic Trial / Provação Prismática
+ID: romulot.ValleyArmory_PrismaticTrial
+Requester: Marlon
+Duração: 1 semana
+Condição de desbloqueio: MINE_LOWEST_LEVEL_REACHED 120
+Objetivo: derrotar 15 Golens de Irídio (Iridium Golem)
+Reward: carta com Prismatic Blade anexada, para toda a equipe
+Escopo multiplayer: Special Order por equipe; recompensa (mail) broadcast a todos os jogadores conectados
+```
+
+### Prismatic Blade
+
+```
+Shop: não
+Drop: não
+Crafting: não
+Quest/Reward: sim
+```
+
+Confirmado e protegido por teste (`PrismaticBladeHasOnlyQuestAcquisition`).
+
+### Testes
+
+`QuestPipelineTests.cs` (novo, 12 testes): validação de definição
+(questId obrigatório, unlockCondition em branco rejeitada, ausência de
+Quest permitida), papel especial da Prismatic Blade (Shop/Drop/Crafting
+ausentes e Quest presente, único equipamento com Quest no catálogo),
+unlock (`BuildTriggerAction` usa `DayStarted`/`AddSpecialOrder`, `ApplyTo`
+preserva entradas vanilla e é idempotente), Special Order (`BuildSpecialOrder`
+produz objetivo Slay e reward Mail corretos, `ApplyTo` preserva entrada
+vanilla existente), mail (`BuildLetter` anexa o Qualified Item ID correto
+do equipamento vinculado, `ApplyTo` preserva carta vanilla existente).
+
+### Validação manual pendente (a executar após esta fase)
+
+Carregar um save sem a condição de mina 120 e confirmar que a quest não
+aparece; avançar até a profundidade correspondente e confirmar que a
+Special Order aparece disponível/ativa; derrotar 15 Iridium Golem e
+confirmar conclusão; verificar recebimento da carta com a Prismatic Blade
+anexada; verificar tooltip/raridade Legendary/iluminação da espada
+recebida; salvar e recarregar para confirmar que a quest continua
+concluída e a recompensa não é concedida novamente; multiplayer (cada
+farmhand recebendo sua própria carta/espada) não testado manualmente.
+
+Próximo passo sugerido: balanceamento final e revisão de release — todas
+as fontes de aquisição (Shop, Drop, Crafting, Quest/Reward) já têm
+implementação real.

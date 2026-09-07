@@ -50,6 +50,15 @@ internal sealed class ModEntry : Mod
         CraftingUnlockInjector craftingUnlockInjector = new(catalogIndex, this.Monitor);
         helper.Events.Content.AssetRequested += craftingUnlockInjector.OnAssetRequested;
 
+        QuestUnlockInjector questUnlockInjector = new(catalogIndex, this.Monitor);
+        helper.Events.Content.AssetRequested += questUnlockInjector.OnAssetRequested;
+
+        SpecialOrderInjector specialOrderInjector = new(catalogIndex, helper.Translation, this.Monitor);
+        helper.Events.Content.AssetRequested += specialOrderInjector.OnAssetRequested;
+
+        QuestMailInjector questMailInjector = new(catalogIndex, helper.Translation, this.Monitor);
+        helper.Events.Content.AssetRequested += questMailInjector.OnAssetRequested;
+
         new ArmoryGiveCommand(catalogIndex, helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
 
         _ = new DropPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(new DropRuleResolver(catalogIndex));
