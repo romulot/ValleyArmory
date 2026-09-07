@@ -1024,3 +1024,54 @@ farmhand recebendo sua própria carta/espada) não testado manualmente.
 Próximo passo sugerido: balanceamento final e revisão de release — todas
 as fontes de aquisição (Shop, Drop, Crafting, Quest/Reward) já têm
 implementação real.
+
+## Fase 8 — balanceamento e integração final
+
+Revisão de todos os 13 equipamentos como um sistema único de progressão,
+sem novo equipamento e sem nova mecânica. Auditoria completa em
+`docs/balance-spec.md` (seção "Fase 8"), incluindo preços reais de venda
+dos ingredientes de crafting extraídos de `Data/Objects`.
+
+Resumo dos ajustes (todos em `assets/armory.json`, nenhum ID/pipeline/
+arquitetura alterado):
+
+- Preço de loja: `Miner's Blade` 900→1400g, `Shadow Fang` 1000→1300g
+  (corrige armas Rare mais baratas que armas Common), `Obsidian Boots`
+  900→1300g, `Obsidian Armor` 850→1250g (aproxima o preço de loja do
+  custo real dos materiais).
+- `critChance` de `Moon Dagger`: 0.12→0.10 (deixa de superar o teto do
+  melhor punhal vanilla, `Iridium Needle`).
+- Ingredientes de crafting: `Stonebreaker` ganhou Iron Bar x5;
+  `Miner's Armor` teve Iron Bar 3→2 e Copper Bar 3→1; `Miner's Blade`
+  teve Iron Bar 8→6 e Coal 15→13; `Obsidian Boots` teve Iridium Bar 2→1;
+  `Obsidian Armor` teve Cinder Shard 8→4; `Ethereal Boots` teve Iridium
+  Bar 3→1; `Ethereal Armor` trocou Radioactive Bar x2 por Iridium Bar x1.
+- Condição de drop adicionada (antes ausente, inconsistente com o resto
+  do catálogo): `Miner's Boots` (mina 10), `Obsidian Boots` (mina 40),
+  `Obsidian Armor` (mina 40) — sem alterar nenhuma chance.
+
+Nenhuma alteração em `Prismatic Blade`, `Black Iron Sword` (stats),
+`Abyss Hammer`, `Ethereal Boots`/`Ethereal Armor` (preço de loja),
+raridades, unlocks de Shop/Crafting/Quest, ou nos três assets de sprite.
+
+### Testes
+
+Um novo teste de regressão, `ShopPriceNeverDecreasesAsRarityIncreasesWithinTheSameEquipmentFamily`
+(`AcquisitionPipelineTests.cs`), protege o Problema 1 acima (preço de loja
+não pode cair ao subir de raridade dentro da mesma família de
+equipamento: arma, bota ou armadura).
+
+### Validação manual pendente (a executar após esta fase)
+
+Early (mina 10): confirmar que `Black Iron Sword`/`Stonebreaker`/
+`Miner's Boots`/`Miner's Armor` continuam compráveis e craftáveis, e que
+o desconto do crafting é perceptível mas não gratuito. Mid (mina 40):
+confirmar que os itens Rare (`Miner's Blade`, `Shadow Fang`,
+`Obsidian Boots`, `Obsidian Armor`) agora custam mais que os Common
+correspondentes. Late (mina 80): confirmar preços/drops dos Epic. Endgame
+(mina 120): validar a Prismatic Trial e a recompensa como já descrito na
+Fase 7D.
+
+Próximo passo sugerido: nenhuma fase de conteúdo adicional planejada;
+revisão de release (changelog, versão do manifest) fica como próximo
+marco.

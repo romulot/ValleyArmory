@@ -145,3 +145,172 @@ Epic), reproduzindo patamares já usados pelo próprio `AdventureShop`
 vanilla para itens de força comparável (ver `docs/signature-audit.md` e
 `docs/vertical-slice.md`, seção Fase 7A). `Prismatic Blade` (Legendary)
 permanece fora da loja por decisão de design, não por limitação técnica.
+
+## Fase 8 — balanceamento e integração final
+
+### Proveniência da auditoria F8
+
+Preços reais de venda dos ingredientes de crafting foram extraídos de
+`Data/Objects` (tipado como `Dictionary<string, StardewValley.GameData.Objects.ObjectData>`
+em 1.6) via `LocalizedContentManager`, na mesma instalação `1.6.15.24356`
+já usada nas fases anteriores. `Price` é o campo de venda vanilla do
+`ObjectData`.
+
+| ID | Nome | Price (venda) |
+|---:|---|---:|
+| 334 | Copper Bar | 60 |
+| 335 | Iron Bar | 120 |
+| 337 | Iridium Bar | 1000 |
+| 343 | Stone | 0 |
+| 382 | Coal | 15 |
+| 768 | Solar Essence | 40 |
+| 769 | Void Essence | 50 |
+| 848 | Cinder Shard | 50 |
+| 910 | Radioactive Bar | 3000 |
+
+Esses valores são usados abaixo apenas como um proxy de "valor em ouro dos
+materiais", para comparar o custo de craftar contra o preço de loja — não
+representam o tempo/risco reais de obter cada material.
+
+### Problemas encontrados e ajustes
+
+**Problema 1 — armas Common mais caras que armas Rare.**
+Evidência: `Black Iron Sword` (Common, 1100g) e `Stonebreaker` (Common,
+1200g) custavam mais na loja que `Miner's Blade` (Rare, 900g) e
+`Shadow Fang` (Rare, 1000g), apesar de as duas Rare desbloquearem só na
+mina 40 contra a mina 10 das Common. Isso invertia o sinal econômico
+esperado (raridade/progressão mais tardia deveria custar igual ou mais, não
+menos) e não acontecia com botas nem armaduras, onde a ordem já era
+crescente por raridade.
+Risco: nenhum motivo real para escolher a rota Rare além de velocidade/crit
+marginal; a Common vira estritamente a melhor compra.
+Ajuste: `Miner's Blade` 900→**1400**; `Shadow Fang` 1000→**1300**. Isso
+recoloca a ordem Common (1100/1200) < Rare (1300/1400) < Epic (2800/4000),
+igual ao padrão já usado em botas e armaduras.
+
+**Problema 2 — Black Iron Sword vs Miner's Blade (ponto de atenção pedido
+explicitamente).**
+Evidência: mesmo após o ajuste de preço, `Black Iron Sword` continua com
+dano bruto (20–30) e defesa (2) maiores que `Miner's Blade` (14–22, defesa
+1). Análise: ambas usam o mesmo `weaponBehavior` (`defenseSword`), mas
+representam arquétipos documentados desde a Fase 6A — Black Iron Sword
+"pesada/defensiva", Miner's Blade "equilibrada/leve" — e Miner's Blade
+compensa com velocidade (+1 vs -2) e crítico (0.03 vs 0.02) maiores. Com o
+preço agora corretamente acima da Common e o desbloqueio na mina 40 (contra
+mina 10), o sinal econômico e de progressão já justifica a diferença; a
+diferença de dano/defesa que resta é um sidegrade de arquétipo deliberado
+(ver seção "Sidegrades"), não um erro.
+Ajuste: nenhuma mudança de stats de combate — apenas o preço (Problema 1).
+
+**Problema 3 — crafting brutalmente mais barato que a loja (Stonebreaker,
+Miner's Armor).**
+Evidência: `Stonebreaker` custava ~330g em materiais (Stone é gratuito,
+Price=0) contra 1200g na loja (72% de desconto); `Miner's Armor` custava
+540g em materiais (Iron Bar x3 + Copper Bar x3) contra apenas 350g na loja —
+ou seja, craftar custava **mais** que comprar, o oposto do esperado.
+Ajuste: `Stonebreaker` ganhou Iron Bar x5 na receita (330g→930g em
+materiais, 22,5% de desconto sobre 1200g). `Miner's Armor` teve Iron Bar
+3→2 e Copper Bar 3→1 (540g→300g em materiais, 14,3% de desconto sobre
+350g). Ambos ficam agora na mesma faixa de desconto (~15–25%) já
+observada em `Black Iron Sword` (930g materiais / 1100g loja, 15,5%).
+
+**Problema 4 — Iridium Bar e Radioactive Bar tornam o crafting de botas e
+armaduras Rare/Epic muito mais caro que a loja.**
+Evidência: `Obsidian Boots` custava 2250g em materiais (Cinder Shard x5 +
+**2** Iridium Bar a 1000g cada) contra 900g na loja; `Obsidian Armor`,
+1400g contra 850g; `Ethereal Boots`, 3900g (3 Iridium Bar!) contra 2200g;
+`Ethereal Armor`, 6720g (**2** Radioactive Bar a 3000g cada) contra 2100g —
+o pior caso do catálogo, craftar custava mais de 3× o preço de loja.
+Ajuste: reduzir a quantidade do minério mais caro em cada receita e, onde
+isso não bastava, subir modestamente o preço de loja:
+- `Obsidian Boots`: Iridium Bar 2→1; preço 900→**1300** (materiais 1250g,
+  96%).
+- `Obsidian Armor`: Cinder Shard 8→4; preço 850→**1250** (materiais 1200g,
+  96%).
+- `Ethereal Boots`: Iridium Bar 3→1; preço mantido em 2200g (materiais
+  1900g, 86%).
+- `Ethereal Armor`: Radioactive Bar x2 substituído por **Iridium Bar x1**
+  (o mesmo minério já usado em Ethereal Boots, mesma raridade/mesmo
+  desbloqueio); preço mantido em 2100g (materiais 1720g, 82%). Um único
+  Radioactive Bar (3000g) já custava mais que o item inteiro pronto
+  (2100g) — nenhuma quantidade razoável desse ingrediente resolveria o
+  problema sem descaracterizar a receita, por isso a substituição foi o
+  ajuste mínimo real, não apenas uma redução de quantidade.
+
+**Problema 5 — Moon Dagger com crítico acima do melhor punhal vanilla.**
+Evidência (já registrada como pendência desde a Fase 6A):
+`CritChance: 0.12` supera o próprio `Iridium Needle` vanilla (0.10), a
+adaga com maior chance de crítico do jogo base, apesar de Moon Dagger ser
+"Epic" — uma raridade abaixo do teto do próprio catálogo (Legendary).
+Ajuste: `critChance` 0.12→**0.10**, empatando com o teto vanilla em vez de
+superá-lo. `critMultiplier` (3.5) permanece abaixo do 7.0 do Iridium
+Needle, então o dano crítico efetivo de Moon Dagger continua bem inferior.
+
+**Problema 6 — condição de drop ausente em 3 das 8 regras (inconsistência
+interna).**
+Evidência: `Shadow Fang`, `Moon Dagger`, `Abyss Hammer`, `Ethereal Boots` e
+`Ethereal Armor` já usavam `condition: MINE_LOWEST_LEVEL_REACHED <mesmo
+nível do Shop>` no bloco de drop; `Miner's Boots`, `Obsidian Boots` e
+`Obsidian Armor` não tinham nenhuma condição, deixando o drop tecnicamente
+disponível mesmo antes do nível de mina correspondente à sua raridade.
+Ajuste: adicionada a mesma condição já usada no Shop de cada item —
+`Miner's Boots` → mina 10, `Obsidian Boots`/`Obsidian Armor` → mina 40 —
+sem alterar nenhuma chance de drop.
+
+### Itens revisados e mantidos sem alteração
+
+- `Prismatic Blade`: dano (55–72) fica abaixo do comparável vanilla Galaxy
+  Sword (60–80), com mais defesa (2 vs 0) e crítico (0.04 vs 0.02) mas
+  menos velocidade (2 vs 8) — sidegrade coerente, não a arma
+  numericamente superior do jogo. A missão (`Prismatic Trial`: 15 Iridium
+  Golem na mina 120) usa o mesmo monstro já empregado como drop raro do
+  Abyss Hammer (mina 80, 2%), reforçando Iridium Golem como referência de
+  "monstro de elite" já estabelecida no próprio catálogo — mantido sem
+  alteração.
+- `Abyss Hammer`: mais lento (-6) e com menos dano médio (58) que o Galaxy
+  Hammer vanilla (-4, 80), mas com a maior defesa (4) e o maior knockback
+  (1.8) do catálogo — identidade de "clava pesada defensiva", não uma
+  cópia inferior do Galaxy Hammer. Mantido.
+- `Miner's Boots`: desconto de crafting de 36% (255g materiais / 400g
+  loja) é maior que o padrão de ~15% das armas, mas a diferença absoluta
+  (145g) é pequena o bastante para não esvaziar a loja nesta faixa de
+  preço mais barata do catálogo. Mantido.
+- Preços de armaduras (`Miner's Armor` 350g, `Obsidian Armor` 1250g,
+  `Ethereal Armor` 2100g): revisados como itens cosméticos/coleção (sem
+  stat de combate), mantidos crescentes por raridade e considerados
+  razoáveis para o material "reforçado"/"élfico" de cada conjunto.
+
+### Matriz final de aquisição (13 equipamentos)
+
+| Item | Shop | Drop | Crafting | Quest |
+|---|---|---|---|---|
+| Miner's Blade | sim | não | sim | não |
+| Black Iron Sword | sim | não | sim | não |
+| Prismatic Blade | não | não | não | sim |
+| Shadow Fang | sim | sim | não | não |
+| Moon Dagger | sim | sim | não | não |
+| Stonebreaker | sim | não | sim | não |
+| Abyss Hammer | sim | sim | não | não |
+| Miner's Boots | sim | sim | sim | não |
+| Obsidian Boots | sim | sim | sim | não |
+| Ethereal Boots | sim | sim | sim | não |
+| Miner's Armor | sim | não | sim | não |
+| Obsidian Armor | sim | sim | sim | não |
+| Ethereal Armor | sim | sim | sim | não |
+
+Todos os 13 itens têm ao menos um método de aquisição; `Prismatic Blade` é
+o único item Quest-only, por decisão de design (Fase 7D). Nenhum item ficou
+com Shop+Drop+Crafting+Quest simultâneos; a distribuição de métodos por
+item não mudou nesta fase, apenas os valores dentro de cada método.
+
+### Nota de fechamento — Fase 8
+
+Nenhum ID, alias, sprite, Qualified Item ID, categoria de item ou pipeline
+de aquisição foi alterado nesta fase — apenas valores de `stats.price`,
+`stats.critChance`, quantidades/identidade de ingredientes de crafting e
+condições de drop, todos dentro do `assets/armory.json` já existente. A
+raridade continua sendo apenas uma referência de posicionamento, não um
+multiplicador automático: cada ajuste acima foi decidido item a item, com
+evidência de preço real (`Data/Objects`) ou de dado vanilla real
+(`Data/Weapons`/`Data/Boots`, já documentados na Fase 6A/6B), nunca por
+fórmula de raridade.

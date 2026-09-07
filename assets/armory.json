@@ -60,7 +60,7 @@
         "critChance": 0.03,
         "critMultiplier": 3.0,
         "knockback": 1.0,
-        "price": 900
+        "price": 1400
       },
       "acquisition": {
         "shop": {
@@ -69,8 +69,8 @@
         },
         "crafting": {
           "ingredients": [
-            { "itemId": "335", "quantity": 8 },
-            { "itemId": "382", "quantity": 15 },
+            { "itemId": "335", "quantity": 6 },
+            { "itemId": "382", "quantity": 13 },
             { "itemId": "334", "quantity": 5 }
           ],
           "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 40"
@@ -173,7 +173,7 @@
         "critChance": 0.08,
         "critMultiplier": 3.4,
         "knockback": 0.7,
-        "price": 1000
+        "price": 1300
       },
       "acquisition": {
         "shop": {
@@ -206,7 +206,7 @@
         "defense": 0,
         "precision": 0,
         "areaOfEffect": 0,
-        "critChance": 0.12,
+        "critChance": 0.10,
         "critMultiplier": 3.5,
         "knockback": 0.65,
         "price": 2800
@@ -256,7 +256,8 @@
           "ingredients": [
             { "itemId": "343", "quantity": 50 },
             { "itemId": "382", "quantity": 10 },
-            { "itemId": "334", "quantity": 3 }
+            { "itemId": "334", "quantity": 3 },
+            { "itemId": "335", "quantity": 5 }
           ]
         }
       },
@@ -320,7 +321,8 @@
         "drop": {
           "sourceType": "Monster",
           "sourceId": "Green Slime",
-          "chance": 0.06
+          "chance": 0.06,
+          "condition": "MINE_LOWEST_LEVEL_REACHED 10"
         },
         "crafting": {
           "ingredients": [
@@ -344,7 +346,7 @@
       "stats": {
         "defense": 3,
         "immunity": 1,
-        "price": 900
+        "price": 1300
       },
       "acquisition": {
         "shop": {
@@ -354,12 +356,13 @@
         "drop": {
           "sourceType": "Monster",
           "sourceId": "Lava Crab",
-          "chance": 0.05
+          "chance": 0.05,
+          "condition": "MINE_LOWEST_LEVEL_REACHED 40"
         },
         "crafting": {
           "ingredients": [
             { "itemId": "848", "quantity": 5 },
-            { "itemId": "337", "quantity": 2 }
+            { "itemId": "337", "quantity": 1 }
           ],
           "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 40"
         }
@@ -396,7 +399,7 @@
           "ingredients": [
             { "itemId": "768", "quantity": 10 },
             { "itemId": "769", "quantity": 10 },
-            { "itemId": "337", "quantity": 3 }
+            { "itemId": "337", "quantity": 1 }
           ],
           "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 80"
         }
@@ -424,8 +427,8 @@
         },
         "crafting": {
           "ingredients": [
-            { "itemId": "335", "quantity": 3 },
-            { "itemId": "334", "quantity": 3 }
+            { "itemId": "335", "quantity": 2 },
+            { "itemId": "334", "quantity": 1 }
           ]
         }
       },
@@ -442,7 +445,7 @@
       "descriptionKey": "equipment.obsidian-armor.description",
       "stats": {
         "defense": 0,
-        "price": 850
+        "price": 1250
       },
       "acquisition": {
         "shop": {
@@ -452,11 +455,12 @@
         "drop": {
           "sourceType": "Monster",
           "sourceId": "Hot Head",
-          "chance": 0.04
+          "chance": 0.04,
+          "condition": "MINE_LOWEST_LEVEL_REACHED 40"
         },
         "crafting": {
           "ingredients": [
-            { "itemId": "848", "quantity": 8 },
+            { "itemId": "848", "quantity": 4 },
             { "itemId": "337", "quantity": 1 }
           ],
           "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 40"
@@ -492,7 +496,7 @@
           "ingredients": [
             { "itemId": "768", "quantity": 8 },
             { "itemId": "769", "quantity": 8 },
-            { "itemId": "910", "quantity": 2 }
+            { "itemId": "337", "quantity": 1 }
           ],
           "unlockCondition": "MINE_LOWEST_LEVEL_REACHED 80"
         }

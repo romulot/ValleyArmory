@@ -122,6 +122,51 @@ public sealed class AcquisitionPipelineTests
     }
 
     [Fact]
+    public void ShopPriceNeverDecreasesAsRarityIncreasesWithinTheSameEquipmentFamily()
+    {
+        // Regression guard for Fase 8: weapon prices previously had Rare items (900-1000g)
+        // priced below Common items (1100-1200g), which made the earlier-unlocked, cheaper
+        // Common tier a strictly better economic choice than the later-unlocked Rare tier.
+        Dictionary<string, int> rarityRank = new(StringComparer.Ordinal)
+        {
+            ["Common"] = 0,
+            ["Rare"] = 1,
+            ["Epic"] = 2,
+            ["Legendary"] = 3
+        };
+
+        ArmoryCatalog catalog = LoadValidCatalog();
+
+        var families = catalog.Equipment
+            .Where(item => item.Acquisition?.Shop is not null)
+            .GroupBy(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer
+                ? "Weapon"
+                : item.Type.ToString());
+
+        foreach (var family in families)
+        {
+            var maxPriceByRank = family
+                .GroupBy(item => rarityRank[item.Rarity])
+                .OrderBy(g => g.Key)
+                .Select(g => (Rank: g.Key, MaxPrice: g.Max(item => item.Stats!.Price)))
+                .ToList();
+
+            for (int i = 1; i < maxPriceByRank.Count; i++)
+            {
+                (int previousRank, int previousMaxPrice) = maxPriceByRank[i - 1];
+                (int currentRank, int currentMinPrice) = (maxPriceByRank[i].Rank, family
+                    .Where(item => rarityRank[item.Rarity] == maxPriceByRank[i].Rank)
+                    .Min(item => item.Stats!.Price));
+
+                Assert.True(
+                    currentMinPrice >= previousMaxPrice,
+                    $"{family.Key}: rarity rank {currentRank}'s cheapest shop price ({currentMinPrice}) is below rank {previousRank}'s priciest ({previousMaxPrice})."
+                );
+            }
+        }
+    }
+
+    [Fact]
     public void PhaseSevenAShopConfigurationIsPreservedExactlyAfterTheDropMigration()
     {
         ArmoryCatalog catalog = LoadValidCatalog();
