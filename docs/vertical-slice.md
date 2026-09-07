@@ -1,61 +1,76 @@
-# Miner's Blade — vertical slice
+# Valley Armory — vertical slice e Fase 6A
 
-## Escopo ativo
+## Escopo ativo (Fase 6A)
 
-O catálogo continua contendo e validando dez equipamentos, mas somente `romulot.ValleyArmory_MinersBlade` é convertido e adicionado a `Data/Weapons`.
+O catálogo contém e valida dez equipamentos (sete armas e três botas). Nesta
+fase, todas as **sete armas** são convertidas e adicionadas a `Data/Weapons`
+pelo pipeline genérico. As três botas permanecem apenas reservadas no
+catálogo — nenhuma bota é convertida ainda (isso pertence à Fase 6B).
 
-QualifiedItemId:
+QualifiedItemIds das sete armas:
 
 ```text
 (W)romulot.ValleyArmory_MinersBlade
+(W)romulot.ValleyArmory_BlackIronSword
+(W)romulot.ValleyArmory_PrismaticBlade
+(W)romulot.ValleyArmory_ShadowFang
+(W)romulot.ValleyArmory_MoonDagger
+(W)romulot.ValleyArmory_Stonebreaker
+(W)romulot.ValleyArmory_AbyssHammer
 ```
 
-## Mapeamento para WeaponData
+## Mapeamento para WeaponData (pipeline genérico)
 
-| Origem | WeaponData | Valor efetivo |
-|---|---|---:|
-| `id` | `Name` | `romulot.ValleyArmory_MinersBlade` |
+Não existe mais uma factory específica por arma. `WeaponDataFactory.Create`
+(`src/Assets/WeaponDataFactory.cs`) converte qualquer `EquipmentDefinition` do
+tipo `Sword`/`Dagger`/`Hammer` usando o mesmo caminho de código.
+
+| Origem | WeaponData | Observação |
+|---|---|---|
+| `id` | `Name` | ID permanente namespaced |
 | `displayNameKey` | `DisplayName` | tradução ativa |
 | `descriptionKey` | `Description` | tradução ativa |
-| `type: sword` | `Type` | `3` (slashing sword) |
-| `sprite.assetName` | `Texture` | `Mods/romulot.ValleyArmory/Weapons` |
-| `sprite.spriteIndex` | `SpriteIndex` | `0` |
-| `stats.minDamage` | `MinDamage` | `14` |
-| `stats.maxDamage` | `MaxDamage` | `22` |
-| `stats.knockback` | `Knockback` | `1.0` |
-| `stats.speed` | `Speed` | `1` |
-| `stats.defense` | `Defense` | `1` |
-| `stats.critChance` | `CritChance` | `0.03` |
-| `stats.critMultiplier` | `CritMultiplier` | `3.0` |
-| raridade | `CustomFields["romulot.ValleyArmory/Rarity"]` | `Rare` |
+| `weaponBehavior` | `Type` | ver mapeamento abaixo |
+| `sprite.assetName` | `Texture` | `Mods/romulot.ValleyArmory/Weapons` (compartilhado pelas 7 armas) |
+| `sprite.spriteIndex` | `SpriteIndex` | `0`–`6`, um por arma |
+| `stats.*` | campos correspondentes | copiados sem transformação, sem multiplicador por raridade |
+| raridade | `CustomFields["romulot.ValleyArmory/Rarity"]` | metadado, nunca altera stats |
+
+### Mapeamento WeaponBehavior → tipo vanilla
+
+Único ponto de tradução no código (`WeaponDataFactory.GetVanillaType`); não há
+magic numbers espalhados fora dessa camada:
+
+| WeaponBehavior | Tipo vanilla | Comportamento |
+|---|---:|---|
+| `StabbingSword` | `0` | espada de estocada (ex.: Galaxy Sword, Cutlass) |
+| `Dagger` | `1` | adaga |
+| `Club` | `2` | clava/martelo |
+| `DefenseSword` | `3` | espada defensiva (ex.: Rusty Sword, Claymore) |
 
 ### Semântica vanilla confirmada em Stardew Valley 1.6.15
 
-`MeleeWeapon.ReloadData()` copia `WeaponData.Speed` e
-`WeaponData.CritChance` diretamente para os campos de runtime da arma. Portanto,
-o mapeamento da Miner's Blade não converte nem perde precisão nesses atributos.
+`MeleeWeapon.ReloadData()` copia `WeaponData.Speed` e `WeaponData.CritChance`
+diretamente para os campos de runtime da arma, para qualquer arma do jogo —
+esta observação não é específica de nenhum item do Valley Armory.
 
-- Para espadas, a duração-base do golpe é calculada como
+- Para espadas, a duração-base do golpe é
   `(400 - Speed * 40 - farmer.addedSpeed * 40) * (1 - WeaponSpeedMultiplier)`
-  milissegundos. Assim, `Speed: 1` reduz a duração-base de 400 ms para 360 ms
-  antes de outros modificadores.
+  milissegundos.
 - O tooltip vanilla exibe a velocidade de espadas como divisão inteira
-  `Speed / 2`. Por isso, o valor interno `1` aparece como `+0 Velocidade`, embora
-  já produza efeito no ataque.
-- Para espadas, `CritChance: 0.03` permanece uma chance-base de 3% no combate e
-  é então afetada pelo multiplicador de chance crítica dos buffs do jogador.
+  `Speed / 2`.
+- `CritChance` permanece uma chance-base no combate e é então afetada pelo
+  multiplicador de chance crítica dos buffs do jogador.
 - O tooltip calcula a unidade exibida como
-  `round((CritChance - 0.001) / 0.02)`. Logo, `0.03` aparece como
-  `+1 Chance Crítico`; esse número não é a porcentagem literal.
+  `round((CritChance - 0.001) / 0.02)`; esse número não é a porcentagem literal.
 - Adagas recebem tratamento vanilla adicional na chance crítica —
-  `(CritChance + 0.005) * 1.12` — tanto no combate quanto na apresentação. Isso
-  não se aplica à Miner's Blade.
+  `(CritChance + 0.005) * 1.12` — tanto no combate quanto na apresentação.
 
 Essas fórmulas foram confirmadas por inspeção do IL do assembly instalado
 `Stardew Valley.dll`, versão de arquivo `1.6.15.24356`. Elas são comportamento
 interno do jogo e devem ser revalidadas ao atualizar a versão-alvo.
 
-Defaults explícitos desta prova:
+Defaults explícitos, aplicados às sete armas:
 
 | WeaponData | Valor | Motivo |
 |---|---:|---|
@@ -69,19 +84,42 @@ Sem equivalente direto nesta fase:
 
 - `stats.price`: `WeaponData` não possui campo de preço; será usado quando aquisição/economia forem implementadas.
 - `acquisition`: permanece apenas metadado `Unspecified`.
-- `rarity.NameColor`: reservado para tooltip futuro.
-- defaults e overrides de luz: reservados para iluminação futura.
-- `LightIntensity`: não é traduzido para API do jogo nesta fase.
 
-## Edição de assets
+## Edição de assets (generalizada)
 
-O handler `Content.AssetRequested`:
+O handler `Content.AssetRequested` (`AssetInjector.EditWeapons`):
 
-1. carrega `assets/weapons.png` somente quando o asset próprio `Mods/romulot.ValleyArmory/Weapons` é solicitado;
-2. edita `Data/Weapons` de forma aditiva;
-3. verifica se a chave já existe antes de adicionar;
-4. em colisão, mantém a entrada existente e registra um único `Warning`;
-5. não substitui o dicionário nem injeta os outros seis IDs de armas.
+1. carrega `assets/weapons.png` somente quando o asset próprio
+   `Mods/romulot.ValleyArmory/Weapons` é solicitado;
+2. itera as sete definições de arma do catálogo e edita `Data/Weapons` de
+   forma aditiva, uma entrada por vez;
+3. verifica se cada ID já existe antes de adicionar (`NonOverwritingAssetEditor.TryAdd`);
+4. em colisão de uma arma específica, mantém a entrada existente, registra um
+   único `Warning` por ID colidido e **continua processando as demais armas**
+   — uma colisão não bloqueia a injeção das outras seis;
+5. nunca substitui o dicionário inteiro nem qualquer entrada pré-existente.
+
+## Ferramentas de desenvolvimento (generalizadas)
+
+`va_list` lista exatamente as sete armas, ordenadas por `SpriteIndex`, com
+alias, raridade, tipo e QualifiedItemId. Os aliases são derivados
+centralizadamente do ID permanente (`DeveloperWeaponCatalog.ToAlias`, kebab-case
+a partir do PascalCase) — não há switch duplicado em nenhum outro ponto do
+código.
+
+| Alias | QualifiedItemId |
+|---|---|
+| `miners-blade` | `(W)romulot.ValleyArmory_MinersBlade` |
+| `black-iron-sword` | `(W)romulot.ValleyArmory_BlackIronSword` |
+| `prismatic-blade` | `(W)romulot.ValleyArmory_PrismaticBlade` |
+| `shadow-fang` | `(W)romulot.ValleyArmory_ShadowFang` |
+| `moon-dagger` | `(W)romulot.ValleyArmory_MoonDagger` |
+| `stonebreaker` | `(W)romulot.ValleyArmory_Stonebreaker` |
+| `abyss-hammer` | `(W)romulot.ValleyArmory_AbyssHammer` |
+
+`va_give <alias>` cria a arma via `ItemRegistry.Create`, não aceita botas, faz
+o item cair aos pés do jogador se o inventário estiver cheio, e falha com
+segurança (mensagem localizada, sem error item) para alias inválido.
 
 ## Teste manual no jogo
 
@@ -94,87 +132,44 @@ Pré-condições:
 
 ### Instalação
 
-1. Na raiz do repositório, execute:
-
-   ```bash
-   dotnet build
-   ```
-
-2. Localize:
-
-   ```text
-   bin/Debug/net6.0/ValleyArmory 0.1.0.zip
-   ```
-
-3. Extraia o ZIP na pasta `Mods` do Stardew Valley. O resultado deve ser:
-
-   ```text
-   Mods/ValleyArmory/manifest.json
-   Mods/ValleyArmory/ValleyArmory.dll
-   Mods/ValleyArmory/assets/armory.json
-   Mods/ValleyArmory/assets/weapons.png
-   Mods/ValleyArmory/i18n/default.json
-   Mods/ValleyArmory/i18n/pt-BR.json
-   ```
-
-4. Remova ou substitua manualmente qualquer instalação anterior de `Mods/ValleyArmory` para não misturar arquivos de builds diferentes.
+1. Na raiz do repositório, execute `dotnet build`.
+2. Localize `bin/Debug/net6.0/ValleyArmory 0.1.0.zip`.
+3. Remova qualquer instalação anterior de `Mods/ValleyArmory` e extraia o ZIP
+   na pasta `Mods` do Stardew Valley, para não misturar arquivos de builds
+   diferentes.
 
 ### Execução
 
-1. Inicie o jogo pelo SMAPI.
-2. Confirme no console a mensagem de carregamento do Valley Armory sem erros de catálogo.
-3. Abra qualquer save.
-4. No console do SMAPI, execute exatamente:
+1. Inicie o jogo pelo SMAPI e confirme no console a mensagem de carregamento
+   do Valley Armory sem erros de catálogo.
+2. Abra qualquer save.
+3. No console do SMAPI, use `va_list` para conferir as sete armas e
+   `va_give <alias>` para qualquer uma delas.
 
-   ```text
-   va_give miners-blade
-   ```
+## Fase 4 — decoração de raridade no tooltip (generalizada)
 
-5. Confirme que aparece uma mensagem localizada de sucesso.
-6. Se o inventário estiver cheio, confirme que a arma cai aos pés do jogador e não desaparece.
+Todas as sete armas (mais as três botas reservadas, quando chegar sua fase)
+recebem decoração via o mesmo fluxo:
 
-### Inspeção do item
+```text
+QualifiedItemId -> EquipmentDefinition -> RarityDefinition -> TooltipPresentation
+```
 
-Confirme no inventário:
+A resolução usa o `QualifiedItemId`, consulta a raridade no catálogo e
+converte `RarityDefinition.NameColor` para a cor do título:
 
-- nome em inglês `Miner's Blade` ou pt-BR `Lâmina do Minerador`;
-- descrição correspondente ao idioma ativo;
-- sprite temporário próprio, sem textura ausente;
-- dano `14–22`;
-- velocidade exibida como `+0` (valor interno `1`, com efeito real de 40 ms);
-- chance crítica exibida como `+1` (valor interno `0.03`, isto é, 3% base);
-- defesa `+1`;
-- knockback perceptível e sem comportamento anormal;
-- arma utilizável como espada, com ataque normal.
+| Raridade | Cor do título | Linha de raridade |
+|---|---|---|
+| Common | mantém a cor vanilla (`NameColor = null`) | exibida |
+| Rare | azul (`#3B82F6`) | exibida |
+| Epic | roxo (`#9B59B6`) | exibida |
+| Legendary | dourado (`#D4A72C`) | exibida |
 
-Não espere ainda cor de raridade, linha “Rare/Raro” ou iluminação.
+Itens vanilla ou de outros mods, e as três botas (ainda sem decoração nesta
+fase), permanecem inalterados.
 
-### Persistência
-
-1. Mantenha a arma no inventário ou em um baú.
-2. Durma para salvar.
-3. Volte ao título.
-4. Recarregue o mesmo save.
-5. Confirme que a arma continua presente, com o mesmo sprite e atributos.
-6. Execute novamente `va_give miners-blade` e confirme que uma nova instância válida é criada.
-
-### Evidências a registrar
-
-- trecho do log desde o carregamento do mod até o comando;
-- captura do inventário com nome, descrição e atributos;
-- resultado do teste com inventário cheio;
-- resultado após salvar e recarregar.
-
-Qualquer error item, textura ausente, perda após reload ou divergência de stats bloqueia as fases de tooltip e iluminação.
-
-## Fase 4 — decoração de raridade no tooltip
-
-Somente `(W)romulot.ValleyArmory_MinersBlade` recebe decoração. A resolução usa
-o `QualifiedItemId`, consulta a raridade `Rare` no catálogo e converte
-`RarityDefinition.NameColor` (`#3B82F6`) para a cor azul do título. Nenhum nome,
-sprite ou texto traduzido participa da identidade.
-
-Harmony atua nos três pontos confirmados pela auditoria:
+Harmony atua nos três pontos confirmados pela auditoria (inalterados desde a
+Fase 4 original):
 
 - postfix em `MeleeWeapon.getExtraSpaceNeededForTooltipSpecialIcons` acrescenta
   uma linha à altura calculada;
@@ -184,92 +179,130 @@ Harmony atua nos três pontos confirmados pela auditoria:
   a cor fornecida à chamada principal `SpriteBatch.DrawString` do
   `boldTitleText`.
 
-A altura adicional é `max(48, ceil(font.MeasureString("TT").Y))`, seguindo o
-passo vertical mínimo usado pelo tooltip vanilla. A largura não é alterada.
-
-O transpiler espera exatamente uma sequência na qual a chamada principal de
-`DrawString(SpriteFont, string, Vector2, Color)` do título carrega
-`boldTitleText` e, imediatamente antes da chamada, `textColor.Value`. Se houver
-zero ou mais de uma correspondência, a aplicação falha. Qualquer falha ao
-localizar ou aplicar um dos três patches remove os patches Harmony pertencentes
-ao mod, desliga toda a decoração e emite um único `Warning`; o tooltip vanilla
-permanece disponível.
+A altura adicional é `max(48, ceil(font.MeasureString("TT").Y))`. O transpiler
+espera exatamente uma correspondência de padrão de IL; zero ou mais de uma
+correspondência faz a aplicação falhar. Qualquer falha ao localizar ou aplicar
+um dos três patches remove os patches Harmony pertencentes ao mod, desliga
+toda a decoração atomicamente e emite um único `Warning`; o tooltip vanilla
+permanece disponível para todos os itens.
 
 Essa dependência de IL corresponde ao assembly `1.6.15.24356` e precisa ser
-revalidada em atualizações do jogo.
+revalidada em atualizações do jogo. Os patches Harmony em si **não foram
+alterados** na Fase 6A, apenas a fonte de dados (`TooltipPresentationResolver`)
+que já era genérica desde a generalização anterior.
 
-## Fase 5 — iluminação da Miner's Blade (single-player)
+## Fase 5 — iluminação (generalizada, com fix da Prismatic Blade)
 
-Decisões arquiteturais aprovadas para esta etapa:
+Fluxo final:
 
-- Escopo: somente `(W)romulot.ValleyArmory_MinersBlade` pode emitir luz.
-- Fonte de verdade da luz: `GameLocation.sharedLights`.
-- `Game1.currentLightSources` é tratado como cache interno do jogo e não é
-  manipulado diretamente pelo mod.
-- Precedência visual: `Equipment override ?? RarityDefinition.Light ?? disabled`.
-- A aparência da luz (`color`, `radius`, `intensity`, `offset`) vem do catálogo;
-  o controlador não hardcodeia valores de raridade.
-- No máximo uma luz própria ativa para o jogador local, com ID determinístico e
-  namespaced por `UniqueMultiplayerID`.
+```text
+QualifiedItemId -> EquipmentDefinition -> OptionalVisualOverrides.Light ?? RarityDefinition.Light ?? disabled
+```
+
+Estado por raridade:
+
+| Raridade | Armas | Luz |
+|---|---|---|
+| Common | Black Iron Sword, Stonebreaker | sem luz (`lightEnabled: false`) |
+| Rare | Miner's Blade, Shadow Fang | azul fraca (`#4A90E2`, intensity `0.35`) |
+| Epic | Moon Dagger, Abyss Hammer | violeta média (`#8E5AC7`, intensity `0.6`) |
+| Legendary | Prismatic Blade | override próprio (ver abaixo) |
+
+### Override final da Prismatic Blade (validado manualmente)
+
+```json
+{
+  "color": "#D63384",
+  "radius": 3.00,
+  "intensity": 0.75
+}
+```
+
+A cor original do override (quase branca, `#FCFEFF`/`intensity 1.00`)
+renderizava como luz invisível — o `LightSource` do jogo trata cores próximas
+do branco como luz muito fraca/nula. O valor final acima produz uma cor de
+runtime saturada (magenta escuro) com luminância maior que Epic e Rare, sem se
+aproximar do branco. **`ToRuntimeColor()` não foi alterado**; apenas os dados
+da Prismatic Blade em `armory.json` foram recalibrados.
+
+O teste de regressão `RuntimeLightColorsIncreaseInLuminanceWithRarityWithoutApproachingWhite`
+(`LightingTests.cs`) trava os bytes de runtime color de Miner's Blade e Moon
+Dagger e confirma que a luminância cresce Rare → Epic → Legendary sem nenhum
+canal se aproximar do branco.
+
+Decisões arquiteturais (inalteradas desde a Fase 5 original, agora aplicadas a
+todas as armas com luz):
+
+- Fonte de verdade da luz: `GameLocation.sharedLights`; `Game1.currentLightSources`
+  não é manipulado diretamente.
+- `radius` nunca influencia cor/brilho — apenas o alcance espacial da luz.
+- No máximo uma luz própria ativa por player, com ID determinístico e
+  namespaced (`romulot.ValleyArmory/weapon-light/<UniqueMultiplayerID>`).
 - Reconciliação idempotente: cria apenas quando necessário, reposiciona/atualiza
   por diferença e remove imediatamente ao perder elegibilidade.
 - Fallback isolado: qualquer falha desativa somente o subsistema de iluminação,
   limpa luzes próprias remanescentes e mantém arma/tooltip funcionando.
 
-Eventos de ciclo de vida cobertos nesta fase (single-player):
+Eventos de ciclo de vida cobertos: `SaveLoaded`, `DayStarted`, `DayEnding`,
+`ReturnedToTitle`, `UpdateTicked`, `Player.Warped`, `PeerConnected`,
+`PeerDisconnected`.
 
-- `SaveLoaded`
-- `DayStarted`
-- `DayEnding`
-- `ReturnedToTitle`
-- `UpdateTicked`
-- `Player.Warped`
+### Limitação conhecida (mantida)
 
-Pass-out/morte são cobertos indiretamente por `DayEnding` e pela reconciliação
-contínua de estado local no `UpdateTicked`.
+> Multiplayer host/farmhand e split-screen ainda não receberam validação
+> manual completa in-game. A implementação está fundamentada nas APIs
+> auditadas e em testes de lógica pura, mas essa validação permanece
+> pendente.
 
-### Fase 5 — estado final e aceite
+## Fase 6A — estado final e aceite
 
-Implementação concluída para a Miner's Blade:
+Critérios de aceite atendidos:
 
-- `LightAppearanceResolver` resolve somente
-  `(W)romulot.ValleyArmory_MinersBlade`.
-- A precedência é `Equipment override ?? RarityDefinition.Light ?? disabled`.
-- `LightIdAllocator` gera IDs determinísticos no formato
-  `romulot.ValleyArmory/weapon-light/<UniqueMultiplayerID>`.
-- `PlayerLightState` evita recriação contínua: a reconciliação escolhe entre
-  `None`, `Create`, `Update`, `RebindLocation` e `Remove`.
-- `EquippedWeaponLightController` usa `GameLocation.sharedLights.Add`,
-  `repositionLightSource`, `getLightSource` e `removeLightSource`.
-- Cada peer reconcilia somente farmers locais; `PeerDisconnected` remove o ID
-  do peer desconectado em todas as locations conhecidas.
-- `ReturnedToTitle` e `DayEnding` removem as luzes próprias restantes.
-- A falha do subsystem emite um `Warning` único, remove luzes próprias e
-  desabilita somente iluminação; arma e tooltip permanecem independentes.
+- as sete armas são geradas por um único `WeaponDataFactory` genérico, sem
+  factory específica por arma;
+- `AssetInjector` injeta cada arma individualmente; colisão em uma não
+  bloqueia as demais; nenhuma entrada existente é sobrescrita;
+- mapeamento `WeaponBehavior → tipo vanilla` centralizado, sem magic numbers
+  espalhados;
+- catálogo com exatamente 7 armas e 3 botas, IDs permanentes, tipos e
+  raridades corretos, `SpriteIndex` `0`–`6`, stats explícitos, sem
+  multiplicador automático por raridade;
+- `assets/weapons.png`: 112×16px, 7 células de 16×16 ocupadas, índices `0`–`6`;
+- `va_list`/`va_give` funcionam para as sete armas via aliases centralizados;
+  botas são rejeitadas;
+- tooltip generalizado: Common (cor vanilla), Rare (azul), Epic (roxo),
+  Legendary (dourado), linha de raridade em todos, fallback Harmony atômico
+  preservado;
+- iluminação generalizada: Common sem luz, Rare/Epic conforme raridade,
+  Prismatic Blade com override próprio validado manualmente;
+- suíte automatizada com **82 testes aprovados**, cobrindo catálogo, factory,
+  injeção de assets, sprites, developer tools, tooltip e iluminação
+  (incluindo regressão de cor/luminância da Prismatic Blade);
+- i18n: chaves idênticas entre `default.json` e `pt-BR.json` (37 chaves em
+  cada arquivo).
 
-Testes automatizados T8 cobrem resolução Rare, override de equipamento,
-desativação explícita, itens fora do escopo, identidade de luz, isolamento de
-estado por player, deduplicação, cleanup namespaced, remoção de peer e fallback
-de warning único. Os testes são de lógica pura e não instanciam networking real,
-`GameLocation` ou renderização XNA.
+Pendências conhecidas:
 
-Validação single-player confirmada manualmente: luz Rare azul baseada em dados,
-movimento, troca de item, warp, ciclo de dia, título e reload do save.
+- multiplayer host/farmhand e split-screen da iluminação sem validação manual
+  completa (ver acima);
+- balanceamento atual (dano, velocidade, crítico, preço) permanece provisório
+  até um playtest mais amplo;
+- os sprites das sete armas estão funcionais e validados
+  tecnicamente/in-game, mas ainda podem receber polish visual futuro;
+- botas (`MinersBoots`, `ObsidianBoots`, `EtherealBoots`) permanecem apenas
+  reservadas no catálogo — nenhuma delas passa pelo pipeline de
+  `Data/Boots`, tooltip ou iluminação nesta fase.
 
-Critérios de aceite atendidos nesta etapa:
+Validação manual já realizada (registrada, não presumida):
 
-- somente a Miner's Blade Rare emite luz;
-- existe no máximo uma luz própria por player;
-- não há recriação contínua por tick;
-- a luz acompanha movimento e faz rebind em warp;
-- troca de item remove a luz;
-- fim de dia e retorno ao título fazem cleanup;
-- fallback não afeta arma nem tooltip;
-- IDs são namespaced e determinísticos;
-- os testes automatizados passam.
+- `va_list` e `va_give` funcionam;
+- Black Iron Sword criada e exibida corretamente no inventário;
+- sprites aparecem no inventário para os itens testados;
+- tooltip Epic da Moon Dagger validado visualmente;
+- iluminação Rare e Epic testada visualmente;
+- Prismatic Blade ajustada manualmente até resultado visual aprovado, com a
+  configuração final `#D63384` / `radius 3.00` / `intensity 0.75`.
 
-Limitação conhecida:
-
-> Multiplayer host/farmhand e split-screen ainda não receberam validação manual
-> completa in-game. A implementação está fundamentada nas APIs auditadas e em
-> testes de lógica pura, mas essa validação permanece pendente.
+Próximo passo sugerido: **Fase 6B — botas** (`Data/Boots`, factory de botas,
+tooltip e, se aplicável, iluminação para as três botas reservadas), usando o
+mesmo pipeline genérico já validado nesta fase.

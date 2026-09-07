@@ -56,7 +56,7 @@ internal sealed class TooltipPatchManager
             LogPatchOwners("IClickableMenu.drawHoverText(StringBuilder,...)", hoverText);
             LogPatchOwners("MeleeWeapon.getExtraSpaceNeededForTooltipSpecialIcons", measure);
             LogPatchOwners("MeleeWeapon.drawTooltip", draw);
-            this.monitor.Log("Miner's Blade tooltip rarity decoration enabled.", LogLevel.Debug);
+            this.monitor.Log("Weapon tooltip rarity decoration enabled.", LogLevel.Debug);
             return true;
         }
         catch (Exception exception)

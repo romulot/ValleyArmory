@@ -57,7 +57,7 @@ internal sealed class ModEntry : Mod
             helper.Events.Player.Warped += this.weaponLightController.OnWarped;
             helper.Events.Multiplayer.PeerConnected += this.weaponLightController.OnPeerConnected;
             helper.Events.Multiplayer.PeerDisconnected += this.weaponLightController.OnPeerDisconnected;
-            this.Monitor.Log("Miner's Blade weapon light subsystem enabled for local lifecycle and multiplayer peer events.", LogLevel.Debug);
+            this.Monitor.Log("Weapon light subsystem enabled for local lifecycle and multiplayer peer events.", LogLevel.Debug);
         }
         else
         {
@@ -65,7 +65,7 @@ internal sealed class ModEntry : Mod
         }
 
         this.Monitor.Log(
-            $"Valley Armory {this.ModManifest.Version} loaded with {catalog.Equipment.Count} validated equipment definitions; only Miner's Blade is enabled for the vertical slice.",
+            $"Valley Armory {this.ModManifest.Version} loaded with {catalog.Equipment.Count} validated equipment definitions.",
             LogLevel.Info
         );
     }

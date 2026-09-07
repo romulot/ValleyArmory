@@ -94,3 +94,14 @@ Recomendações, sem aplicação nesta fase:
 - `Speed`, `CritChance`, `CritMultiplier`, `Knockback`, `Precision` e `AreaOfEffect` são campos explícitos de `WeaponData`.
 - `CanBeLostOnDeath`, `MineBaseLevel` e `MineMinLevel` também são dados do registro e não devem ser derivados da raridade.
 - O preço de armas continua fora de `WeaponData`; o valor do catálogo é metadado do Valley Armory até a fase de economia/aquisição.
+
+## Nota de fechamento — Fase 6A
+
+As sete armas planejadas nesta tabela foram implementadas com os valores de
+stats já vigentes em `assets/armory.json`, sem multiplicador automático por
+raridade. Nenhum número de balanceamento foi alterado nesta etapa de
+consolidação.
+
+O balanceamento atual permanece **provisório** até um playtest mais amplo,
+incluindo a recomendação já registrada de reavaliar `Moon Dagger` (crítico
+`0.12`) contra os comparáveis vanilla extraídos acima.
