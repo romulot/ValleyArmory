@@ -30,4 +30,9 @@ internal sealed class CatalogIndex
     {
         return this.rarities.TryGetValue(id, out rarity);
     }
+
+    public IEnumerable<EquipmentDefinition> GetAllEquipment()
+    {
+        return this.byId.Values;
+    }
 }

@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using ValleyArmory.Assets;
 using ValleyArmory.Catalog;
+using ValleyArmory;
 
 namespace ValleyArmory.Lighting;
 
@@ -19,7 +20,7 @@ internal readonly record struct WeaponLightAppearance(Color Color, float Radius,
 
 internal sealed class LightAppearanceResolver
 {
-    private const string MinersBladeQualifiedItemId = MinersBladeWeaponDataFactory.QualifiedItemId;
+    private const string MinersBladeQualifiedItemId = EquipmentIdentity.MinersBladeQualifiedItemId;
     private readonly bool hasMinersBladeAppearance;
     private readonly WeaponLightAppearance minersBladeAppearance;
 

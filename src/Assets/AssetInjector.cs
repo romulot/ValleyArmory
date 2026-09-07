@@ -10,21 +10,18 @@ internal sealed class AssetInjector
 {
     internal const string WeaponTextureAssetName = "Mods/romulot.ValleyArmory/Weapons";
 
-    private readonly EquipmentDefinition minersBlade;
-    private readonly MinersBladeWeaponDataFactory factory;
+    private readonly IReadOnlyList<EquipmentDefinition> weapons;
+    private readonly WeaponDataFactory factory;
     private readonly ITranslationHelper translations;
     private readonly IMonitor monitor;
-    private bool collisionLogged;
+    private readonly HashSet<string> collisionLogged = new(StringComparer.Ordinal);
 
     public AssetInjector(CatalogIndex catalog, ITranslationHelper translations, IMonitor monitor)
     {
-        if (!catalog.TryGetById(MinersBladeWeaponDataFactory.ItemId, out EquipmentDefinition? definition) || definition is null)
-        {
-            throw new InvalidOperationException("The validated catalog does not contain the Miner's Blade.");
-        }
-
-        this.minersBlade = definition;
-        this.factory = new MinersBladeWeaponDataFactory();
+        this.weapons = catalog.GetAllEquipment()
+            .Where(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer)
+            .ToArray();
+        this.factory = new WeaponDataFactory();
         this.translations = translations;
         this.monitor = monitor;
     }
@@ -46,25 +43,27 @@ internal sealed class AssetInjector
     private void EditWeapons(IAssetData asset)
     {
         IDictionary<string, WeaponData> weapons = asset.AsDictionary<string, WeaponData>().Data;
-        WeaponData data = this.factory.Create(
-            this.minersBlade,
-            key => this.translations.Get(key).ToString()
-        );
-
-        if (!NonOverwritingAssetEditor.TryAdd(weapons, this.minersBlade.Id, data))
+        foreach (EquipmentDefinition definition in this.weapons)
         {
-            if (!this.collisionLogged)
+            WeaponData data = this.factory.Create(
+                definition,
+                key => this.translations.Get(key).ToString()
+            );
+
+            if (!NonOverwritingAssetEditor.TryAdd(weapons, definition.Id, data))
             {
-                this.monitor.Log(
-                    $"Skipped Miner's Blade injection because Data/Weapons already contains ID '{this.minersBlade.Id}'. Existing data was preserved.",
-                    LogLevel.Warn
-                );
-                this.collisionLogged = true;
+                if (this.collisionLogged.Add(definition.Id))
+                {
+                    this.monitor.Log(
+                        $"Skipped weapon injection because Data/Weapons already contains ID '{definition.Id}'. Existing data was preserved.",
+                        LogLevel.Warn
+                    );
+                }
+
+                continue;
             }
 
-            return;
+            this.monitor.Log($"Injected Data/Weapons entry '{definition.Id}'.", LogLevel.Trace);
         }
-
-        this.monitor.Log($"Injected Data/Weapons entry '{this.minersBlade.Id}'.", LogLevel.Trace);
     }
 }

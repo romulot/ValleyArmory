@@ -2,12 +2,13 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
+using ValleyArmory;
 
 namespace ValleyArmory.Tooltips;
 
 internal static class TooltipPatchContext
 {
-    private const string MinersBladeQualifiedItemId = Assets.MinersBladeWeaponDataFactory.QualifiedItemId;
+    private const string MinersBladeQualifiedItemId = EquipmentIdentity.MinersBladeQualifiedItemId;
     private static TooltipPresentationResolver? resolver;
     private static ITranslationHelper? translations;
     private static IMonitor? monitor;

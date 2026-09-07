@@ -2,6 +2,7 @@ using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Tools;
 using ValleyArmory.Assets;
+using ValleyArmory;
 
 namespace ValleyArmory.DeveloperTools;
 
@@ -45,22 +46,22 @@ internal sealed class MinersBladeGiveCommand
         Item? item;
         try
         {
-            item = ItemRegistry.Create(MinersBladeWeaponDataFactory.QualifiedItemId, 1, 0, allowNull: true);
+            item = ItemRegistry.Create(EquipmentIdentity.MinersBladeQualifiedItemId, 1, 0, allowNull: true);
         }
         catch (Exception exception)
         {
             this.monitor.Log(
-                $"Could not create '{MinersBladeWeaponDataFactory.QualifiedItemId}': {exception}",
+                $"Could not create '{EquipmentIdentity.MinersBladeQualifiedItemId}': {exception}",
                 LogLevel.Warn
             );
             this.ShowMessage("command.va-give.creation-failed", isError: true);
             return;
         }
 
-        if (item is not MeleeWeapon || !string.Equals(item.QualifiedItemId, MinersBladeWeaponDataFactory.QualifiedItemId, StringComparison.Ordinal))
+        if (item is not MeleeWeapon || !string.Equals(item.QualifiedItemId, EquipmentIdentity.MinersBladeQualifiedItemId, StringComparison.Ordinal))
         {
             this.monitor.Log(
-                $"ItemRegistry did not create the expected weapon '{MinersBladeWeaponDataFactory.QualifiedItemId}'.",
+                $"ItemRegistry did not create the expected weapon '{EquipmentIdentity.MinersBladeQualifiedItemId}'.",
                 LogLevel.Warn
             );
             this.ShowMessage("command.va-give.creation-failed", isError: true);

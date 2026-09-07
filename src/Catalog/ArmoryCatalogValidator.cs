@@ -154,6 +154,17 @@ internal sealed class ArmoryCatalogValidator
                 errors.Add($"{field}.type: value is required.");
             }
 
+            if (item.Type is EquipmentType.Boots && item.WeaponBehavior is not null)
+            {
+                errors.Add($"{field}.weaponBehavior: boots cannot define a weapon behavior.");
+            }
+
+            if (item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer
+                && item.WeaponBehavior is null)
+            {
+                errors.Add($"{field}.weaponBehavior: weapons require a weapon behavior.");
+            }
+
             if (!rarityIds.Contains(item.Rarity))
             {
                 errors.Add($"{field}.rarity: unknown rarity '{item.Rarity}'.");
@@ -192,6 +203,16 @@ internal sealed class ArmoryCatalogValidator
             errors.Add($"{field}.stats.defense: must be zero or greater.");
         }
 
+        if (stats.Precision < 0)
+        {
+            errors.Add($"{field}.stats.precision: must be zero or greater.");
+        }
+
+        if (stats.AreaOfEffect < 0)
+        {
+            errors.Add($"{field}.stats.areaOfEffect: must be zero or greater.");
+        }
+
         if (item.Type is EquipmentType.Boots)
         {
             if (stats.Immunity is null or < 0)
@@ -200,7 +221,8 @@ internal sealed class ArmoryCatalogValidator
             }
 
             if (stats.MinDamage is not null || stats.MaxDamage is not null || stats.Speed is not null ||
-                stats.CritChance is not null || stats.CritMultiplier is not null || stats.Knockback is not null)
+                stats.CritChance is not null || stats.CritMultiplier is not null || stats.Knockback is not null ||
+                stats.Precision != 0 || stats.AreaOfEffect != 0)
             {
                 errors.Add($"{field}.stats: boots cannot define weapon stats.");
             }

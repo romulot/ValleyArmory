@@ -18,6 +18,8 @@ internal sealed class EquipmentDefinition
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EquipmentType? Type { get; init; }
 
+    public WeaponBehavior? WeaponBehavior { get; init; }
+
     public string Rarity { get; init; } = string.Empty;
 
     public string DisplayNameKey { get; init; } = string.Empty;
@@ -41,6 +43,14 @@ internal enum EquipmentType
     Boots
 }
 
+internal enum WeaponBehavior
+{
+    StabbingSword,
+    Dagger,
+    Club,
+    DefenseSword
+}
+
 internal sealed class EquipmentStats
 {
     public int? MinDamage { get; init; }
@@ -56,6 +66,10 @@ internal sealed class EquipmentStats
     public float? CritMultiplier { get; init; }
 
     public float? Knockback { get; init; }
+
+    public int Precision { get; init; }
+
+    public int AreaOfEffect { get; init; }
 
     public int? Immunity { get; init; }
 

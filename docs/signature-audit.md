@@ -88,6 +88,23 @@ public Item WeaponDataDefinition.CreateItem(ParsedItemData data);
 
 Consequência: `Data/Weapons` pode carregar integralmente sprite e atributos vanilla. Raridade continuará sendo metadado do catálogo; não modificará stats automaticamente.
 
+### Tipos internos de armas confirmados
+
+No assembly `Stardew Valley.dll` `1.6.15.24356`, os campos estáticos de
+`StardewValley.Tools.MeleeWeapon` são:
+
+```text
+stabbingSword = 0
+dagger        = 1
+club          = 2
+defenseSword  = 3
+```
+
+Portanto, `Dagger` é `1` e `Hammer/Club` é `2`, mas `Sword` possui pelo menos
+dois comportamentos vanilla: espadas de estocada (`0`) e espadas defensivas
+(`3`). A factory genérica não deve escolher um único valor de espada sem uma
+decisão explícita por item.
+
 ### Botas
 
 Confirmado em `Stardew Valley.dll`:
@@ -99,7 +116,9 @@ protected Dictionary<string, string> BootsDataDefinition.GetDataSheet();
 protected string[] BootsDataDefinition.GetRawData(string itemId);
 ```
 
-O binário confirma que botas ainda são interpretadas como `Dictionary<string, string>` e separadas em campos. A ordem de dez campos adotada pelo plano permanece:
+Os dados extraídos de `Content/Data/Boots.xnb` na instalação alvo contêm 18
+entradas e cada valor bruto possui **sete campos** separados por `/`. A ordem
+real observada é:
 
 ```text
 0 Name
@@ -109,12 +128,17 @@ O binário confirma que botas ainda são interpretadas como `Dictionary<string, 
 4 Immunity
 5 ColorIndex
 6 DisplayName
-7 ColorTexture
-8 SpriteIndex
-9 Texture
 ```
 
-Consequência: o gerador terá teste exato de dez posições e rejeitará `/` em valores não escapáveis. O `Price` configurado para botas não deve ser apresentado como preço efetivo sem confirmar a fórmula no teste integrado.
+`ColorTexture`, `SpriteIndex` e `Texture` não aparecem no registro bruto; são
+resolvidos por `BootsDataDefinition` e pelo contrato vanilla de textura. A
+auditoria anterior que descrevia dez campos estava incorreta para esta versão e
+foi substituída por este formato de sete campos.
+
+Consequência: o futuro `BootDataFactory` deve gerar exatamente sete campos para
+este assembly e rejeitar `/` em valores não escapáveis. O `Price` configurado
+para botas não deve ser apresentado como preço efetivo sem confirmar a fórmula
+no teste integrado.
 
 ### ItemRegistry
 

@@ -4,6 +4,9 @@ namespace ValleyArmory;
 
 internal static class EquipmentIdentity
 {
+    internal const string MinersBladeItemId = "romulot.ValleyArmory_MinersBlade";
+    internal const string MinersBladeQualifiedItemId = "(W)romulot.ValleyArmory_MinersBlade";
+
     public static string GetQualifiedItemId(EquipmentDefinition equipment)
     {
         string typePrefix = equipment.Type switch

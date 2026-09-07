@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using ValleyArmory.Catalog;
+using ValleyArmory;
 
 namespace ValleyArmory.Tooltips;
 
@@ -21,7 +22,7 @@ internal sealed class TooltipPresentationResolver
     )
     {
         presentation = null;
-        if (!string.Equals(qualifiedItemId, Assets.MinersBladeWeaponDataFactory.QualifiedItemId, StringComparison.Ordinal)
+        if (!string.Equals(qualifiedItemId, EquipmentIdentity.MinersBladeQualifiedItemId, StringComparison.Ordinal)
             || !this.catalog.TryGetByQualifiedId(qualifiedItemId!, out EquipmentDefinition? equipment)
             || equipment is null
             || !this.catalog.TryGetRarity(equipment.Rarity, out RarityDefinition? rarity)
