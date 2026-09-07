@@ -14,7 +14,9 @@ internal sealed class EquippedWeaponLightController
     private readonly LightAppearanceResolver appearanceResolver;
     private readonly LightIdAllocator idAllocator;
     private readonly LightingFailSafe failSafe = new();
-    private PlayerLightState? state;
+    private readonly Dictionary<long, PlayerLightState> states = new();
+    private readonly HashSet<long> activeLocalPlayerIds = new();
+    private readonly List<long> stalePlayerIds = new();
 
     public EquippedWeaponLightController(IMonitor monitor, LightAppearanceResolver appearanceResolver, LightIdAllocator idAllocator)
     {
@@ -27,8 +29,8 @@ internal sealed class EquippedWeaponLightController
     {
         this.RunSafely("SaveLoaded", () =>
         {
-            this.EnsureState();
-            this.ReconcileLocalPlayerLight();
+            this.states.Clear();
+            this.ReconcileLocalFarmerLights();
         });
     }
 
@@ -37,13 +39,13 @@ internal sealed class EquippedWeaponLightController
         this.RunSafely("ReturnedToTitle", () =>
         {
             this.CleanupOwnedLights();
-            this.state = null;
+            this.states.Clear();
         });
     }
 
     public void OnDayStarted(object? sender, DayStartedEventArgs e)
     {
-        this.RunSafely("DayStarted", this.ReconcileLocalPlayerLight);
+        this.RunSafely("DayStarted", this.ReconcileLocalFarmerLights);
     }
 
     public void OnDayEnding(object? sender, DayEndingEventArgs e)
@@ -53,10 +55,24 @@ internal sealed class EquippedWeaponLightController
 
     public void OnWarped(object? sender, WarpedEventArgs e)
     {
-        if (!e.IsLocalPlayer)
+        if (!e.Player.IsLocalPlayer)
             return;
 
-        this.RunSafely("Warped", this.ReconcileLocalPlayerLight);
+        this.RunSafely("Warped", () => this.ReconcileFarmerLight(e.Player));
+    }
+
+    public void OnPeerConnected(object? sender, PeerConnectedEventArgs e)
+    {
+        this.monitor.Log($"peer connected: playerId={e.Peer.PlayerID}, screen={e.Peer.ScreenID?.ToString() ?? "<none>"}", LogLevel.Trace);
+    }
+
+    public void OnPeerDisconnected(object? sender, PeerDisconnectedEventArgs e)
+    {
+        this.RunSafely("PeerDisconnected", () =>
+        {
+            this.monitor.Log($"peer disconnected: playerId={e.Peer.PlayerID}, screen={e.Peer.ScreenID?.ToString() ?? "<none>"}", LogLevel.Trace);
+            this.CleanupDisconnectedPeer(e.Peer.PlayerID);
+        });
     }
 
     public void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -64,38 +80,65 @@ internal sealed class EquippedWeaponLightController
         if (!Context.IsWorldReady || !this.failSafe.Enabled)
             return;
 
-        this.RunSafely("UpdateTicked", this.ReconcileLocalPlayerLight);
+        this.RunSafely("UpdateTicked", this.ReconcileLocalFarmerLights);
     }
 
-    private void ReconcileLocalPlayerLight()
+    private void ReconcileLocalFarmerLights()
     {
-        if (!Context.IsWorldReady || !this.EnsureState())
+        if (!Context.IsWorldReady)
             return;
 
-        Farmer player = Game1.player;
-        if (player.currentLocation is null)
+        this.activeLocalPlayerIds.Clear();
+        foreach (Farmer farmer in Game1.getOnlineFarmers())
+        {
+            if (!farmer.IsLocalPlayer)
+                continue;
+
+            this.activeLocalPlayerIds.Add(farmer.UniqueMultiplayerID);
+            this.ReconcileFarmerLight(farmer);
+        }
+
+        this.stalePlayerIds.Clear();
+        this.stalePlayerIds.AddRange(PlayerLightStateSet.FindStalePlayers(this.states.Keys, this.activeLocalPlayerIds));
+
+        foreach (long stalePlayerId in this.stalePlayerIds)
+        {
+            this.RemoveLightAndState(stalePlayerId, "stale-local-player");
+        }
+    }
+
+    private void ReconcileFarmerLight(Farmer player)
+    {
+        if (!player.IsLocalPlayer)
             return;
 
-        string locationName = player.currentLocation.NameOrUniqueName;
+        PlayerLightState state = this.GetOrCreateState(player.UniqueMultiplayerID);
+        string locationName = player.currentLocation?.NameOrUniqueName ?? string.Empty;
         bool eligible = this.TryGetEligibleAppearance(player, out WeaponLightAppearance appearance, out Vector2 position);
-        LightReconcileAction action = this.state!.DetermineAction(eligible, locationName, position, appearance);
+        LightReconcileAction action = state.DetermineAction(eligible, locationName, position, appearance);
+
+        long playerId = player.UniqueMultiplayerID;
 
         switch (action)
         {
             case LightReconcileAction.None:
                 return;
             case LightReconcileAction.Create:
-                this.ApplyOrCreateLight(player.currentLocation, position, appearance);
+                if (player.currentLocation is not null)
+                    this.ApplyOrCreateLight(player, state, player.currentLocation, position, appearance);
                 return;
             case LightReconcileAction.Update:
-                this.ApplyOrCreateLight(player.currentLocation, position, appearance);
+                if (player.currentLocation is not null)
+                    this.ApplyOrCreateLight(player, state, player.currentLocation, position, appearance);
                 return;
             case LightReconcileAction.RebindLocation:
-                this.RemoveLightFromTrackedLocation();
-                this.ApplyOrCreateLight(player.currentLocation, position, appearance);
+                this.monitor.Log($"light rebind: playerId={playerId}", LogLevel.Trace);
+                this.RemoveLightFromTrackedLocation(state, playerId, "rebind");
+                if (player.currentLocation is not null)
+                    this.ApplyOrCreateLight(player, state, player.currentLocation, position, appearance);
                 return;
             case LightReconcileAction.Remove:
-                this.RemoveLightFromTrackedLocation();
+                this.RemoveLightFromTrackedLocation(state, playerId, "not-eligible");
                 return;
         }
     }
@@ -115,12 +158,13 @@ internal sealed class EquippedWeaponLightController
         return true;
     }
 
-    private void ApplyOrCreateLight(GameLocation location, Vector2 position, WeaponLightAppearance appearance)
+    private void ApplyOrCreateLight(Farmer player, PlayerLightState state, GameLocation location, Vector2 position, WeaponLightAppearance appearance)
     {
-        string lightId = this.state!.LightId;
+        string lightId = state.LightId;
         if (!this.idAllocator.IsOwned(lightId))
             return;
 
+        bool created = false;
         if (!location.hasLightSource(lightId))
         {
             LightSource source = new(
@@ -130,10 +174,11 @@ internal sealed class EquippedWeaponLightController
                 appearance.Radius,
                 appearance.ToRuntimeColor(),
                 LightSource.LightContext.None,
-                Game1.player.UniqueMultiplayerID,
+                player.UniqueMultiplayerID,
                 location.NameOrUniqueName
             );
             location.sharedLights.Add(lightId, source);
+            created = true;
         }
         else
         {
@@ -146,55 +191,106 @@ internal sealed class EquippedWeaponLightController
             }
         }
 
-        this.state.MarkApplied(location.NameOrUniqueName, position, appearance);
+        state.MarkApplied(location.NameOrUniqueName, position, appearance);
+        if (created)
+            this.monitor.Log($"light create: playerId={player.UniqueMultiplayerID}", LogLevel.Trace);
     }
 
-    private void RemoveLightFromTrackedLocation()
+    private void RemoveLightFromTrackedLocation(PlayerLightState state, long playerId, string reason)
     {
-        if (this.state is null || !this.state.HasLight || !this.idAllocator.IsOwned(this.state.LightId))
+        if (!state.HasLight || !this.idAllocator.IsOwned(state.LightId))
             return;
 
-        string lightId = this.state.LightId;
-        if (this.state.LocationName is not null)
+        bool removed = false;
+        string lightId = state.LightId;
+        if (state.LocationName is not null)
         {
-            GameLocation? tracked = Game1.locations.FirstOrDefault(location => string.Equals(location.NameOrUniqueName, this.state.LocationName, StringComparison.Ordinal));
+            GameLocation? tracked = Game1.locations.FirstOrDefault(location => string.Equals(location.NameOrUniqueName, state.LocationName, StringComparison.Ordinal));
             if (tracked is not null && tracked.hasLightSource(lightId))
+            {
                 tracked.removeLightSource(lightId);
+                removed = true;
+            }
         }
 
         GameLocation? current = Game1.currentLocation;
         if (current is not null && current.hasLightSource(lightId))
+        {
             current.removeLightSource(lightId);
+            removed = true;
+        }
 
-        this.state.MarkRemoved();
+        state.MarkRemoved();
+        if (removed)
+            this.monitor.Log($"light remove: playerId={playerId}, reason={reason}", LogLevel.Trace);
     }
 
     private void CleanupOwnedLights()
     {
-        if (this.state is null || !this.idAllocator.IsOwned(this.state.LightId))
-            return;
-
-        string lightId = this.state.LightId;
-        foreach (GameLocation location in Game1.locations)
+        foreach ((long playerId, PlayerLightState state) in this.states)
         {
-            if (location.hasLightSource(lightId))
-                location.removeLightSource(lightId);
+            if (this.idAllocator.FilterOwned(new[] { state.LightId }).Count == 0)
+                continue;
+
+            if (RemoveLightEverywhere(state.LightId))
+                this.monitor.Log($"light remove: playerId={playerId}, reason=cleanup", LogLevel.Trace);
+
+            state.MarkRemoved();
         }
 
-        this.state.MarkRemoved();
+        this.states.Clear();
     }
 
-    private bool EnsureState()
+    private void CleanupDisconnectedPeer(long disconnectedPlayerId)
     {
-        if (!Context.IsWorldReady)
-            return false;
+        string lightId = this.idAllocator.GetLocalPlayerLightId(disconnectedPlayerId);
+        if (!this.idAllocator.IsOwned(lightId))
+            return;
 
-        long playerId = Game1.player.UniqueMultiplayerID;
+        bool removed = RemoveLightEverywhere(lightId);
+        if (removed)
+            this.monitor.Log($"light remove: playerId={disconnectedPlayerId}, reason=peer-disconnected", LogLevel.Trace);
+
+        if (this.states.TryGetValue(disconnectedPlayerId, out PlayerLightState? state))
+        {
+            state.MarkRemoved();
+            _ = PlayerLightStateSet.RemovePeerState(this.states, disconnectedPlayerId);
+        }
+    }
+
+    private void RemoveLightAndState(long playerId, string reason)
+    {
+        if (!this.states.TryGetValue(playerId, out PlayerLightState? state))
+            return;
+
+        this.RemoveLightFromTrackedLocation(state, playerId, reason);
+        _ = PlayerLightStateSet.RemovePeerState(this.states, playerId);
+    }
+
+    private PlayerLightState GetOrCreateState(long playerId)
+    {
+        if (this.states.TryGetValue(playerId, out PlayerLightState? existing))
+            return existing;
+
         string lightId = this.idAllocator.GetLocalPlayerLightId(playerId);
-        if (this.state is null || !string.Equals(this.state.LightId, lightId, StringComparison.Ordinal))
-            this.state = new PlayerLightState(lightId);
+        PlayerLightState state = new(lightId);
+        this.states.Add(playerId, state);
+        return state;
+    }
 
-        return true;
+    private static bool RemoveLightEverywhere(string lightId)
+    {
+        bool removed = false;
+        foreach (GameLocation location in Game1.locations)
+        {
+            if (!location.hasLightSource(lightId))
+                continue;
+
+            location.removeLightSource(lightId);
+            removed = true;
+        }
+
+        return removed;
     }
 
     private void RunSafely(string operation, Action action)

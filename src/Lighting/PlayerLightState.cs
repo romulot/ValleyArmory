@@ -61,3 +61,17 @@ internal sealed class PlayerLightState
         this.Appearance = default;
     }
 }
+
+internal static class PlayerLightStateSet
+{
+    public static IReadOnlyList<long> FindStalePlayers(IEnumerable<long> trackedPlayerIds, IEnumerable<long> activePlayerIds)
+    {
+        HashSet<long> active = activePlayerIds.ToHashSet();
+        return trackedPlayerIds.Where(playerId => !active.Contains(playerId)).ToArray();
+    }
+
+    public static bool RemovePeerState(IDictionary<long, PlayerLightState> states, long playerId)
+    {
+        return states.Remove(playerId);
+    }
+}

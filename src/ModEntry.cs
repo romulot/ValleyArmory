@@ -55,7 +55,9 @@ internal sealed class ModEntry : Mod
             helper.Events.GameLoop.ReturnedToTitle += this.weaponLightController.OnReturnedToTitle;
             helper.Events.GameLoop.UpdateTicked += this.weaponLightController.OnUpdateTicked;
             helper.Events.Player.Warped += this.weaponLightController.OnWarped;
-            this.Monitor.Log("Miner's Blade weapon light subsystem enabled for local player lifecycle events.", LogLevel.Debug);
+            helper.Events.Multiplayer.PeerConnected += this.weaponLightController.OnPeerConnected;
+            helper.Events.Multiplayer.PeerDisconnected += this.weaponLightController.OnPeerDisconnected;
+            this.Monitor.Log("Miner's Blade weapon light subsystem enabled for local lifecycle and multiplayer peer events.", LogLevel.Debug);
         }
         else
         {

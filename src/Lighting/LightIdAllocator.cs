@@ -21,4 +21,9 @@ internal sealed class LightIdAllocator
         return !string.IsNullOrWhiteSpace(lightId)
             && lightId.StartsWith(this.prefix, StringComparison.Ordinal);
     }
+
+    public IReadOnlyList<string> FilterOwned(IEnumerable<string> lightIds)
+    {
+        return lightIds.Where(this.IsOwned).Distinct(StringComparer.Ordinal).ToArray();
+    }
 }

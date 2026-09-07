@@ -227,3 +227,49 @@ Eventos de ciclo de vida cobertos nesta fase (single-player):
 
 Pass-out/morte são cobertos indiretamente por `DayEnding` e pela reconciliação
 contínua de estado local no `UpdateTicked`.
+
+### Fase 5 — estado final e aceite
+
+Implementação concluída para a Miner's Blade:
+
+- `LightAppearanceResolver` resolve somente
+  `(W)romulot.ValleyArmory_MinersBlade`.
+- A precedência é `Equipment override ?? RarityDefinition.Light ?? disabled`.
+- `LightIdAllocator` gera IDs determinísticos no formato
+  `romulot.ValleyArmory/weapon-light/<UniqueMultiplayerID>`.
+- `PlayerLightState` evita recriação contínua: a reconciliação escolhe entre
+  `None`, `Create`, `Update`, `RebindLocation` e `Remove`.
+- `EquippedWeaponLightController` usa `GameLocation.sharedLights.Add`,
+  `repositionLightSource`, `getLightSource` e `removeLightSource`.
+- Cada peer reconcilia somente farmers locais; `PeerDisconnected` remove o ID
+  do peer desconectado em todas as locations conhecidas.
+- `ReturnedToTitle` e `DayEnding` removem as luzes próprias restantes.
+- A falha do subsystem emite um `Warning` único, remove luzes próprias e
+  desabilita somente iluminação; arma e tooltip permanecem independentes.
+
+Testes automatizados T8 cobrem resolução Rare, override de equipamento,
+desativação explícita, itens fora do escopo, identidade de luz, isolamento de
+estado por player, deduplicação, cleanup namespaced, remoção de peer e fallback
+de warning único. Os testes são de lógica pura e não instanciam networking real,
+`GameLocation` ou renderização XNA.
+
+Validação single-player confirmada manualmente: luz Rare azul baseada em dados,
+movimento, troca de item, warp, ciclo de dia, título e reload do save.
+
+Critérios de aceite atendidos nesta etapa:
+
+- somente a Miner's Blade Rare emite luz;
+- existe no máximo uma luz própria por player;
+- não há recriação contínua por tick;
+- a luz acompanha movimento e faz rebind em warp;
+- troca de item remove a luz;
+- fim de dia e retorno ao título fazem cleanup;
+- fallback não afeta arma nem tooltip;
+- IDs são namespaced e determinísticos;
+- os testes automatizados passam.
+
+Limitação conhecida:
+
+> Multiplayer host/farmhand e split-screen ainda não receberam validação manual
+> completa in-game. A implementação está fundamentada nas APIs auditadas e em
+> testes de lógica pura, mas essa validação permanece pendente.
