@@ -16,10 +16,17 @@ namespace ValleyArmory.Tooltips;
 /// </summary>
 internal static class ClothingTooltipPatches
 {
-    public static void MeasurePostfix(Item __instance, SpriteFont font, ref Point __result)
+    public static void MeasurePostfix(Item __instance, SpriteFont font, int startingHeight, ref Point __result)
     {
+        // Item.getExtraSpaceNeededForTooltipSpecialIcons returns Point.Zero by default, which
+        // IClickableMenu.drawHoverText treats as "no override — keep the normally computed box
+        // height". Unlike MeleeWeapon/Boots (which override this method and already return an
+        // absolute total built from startingHeight), naively doing "__result.Y += lineHeight" here
+        // would turn that zero into a small nonzero value, which drawHoverText then treats as an
+        // absolute override — collapsing the tooltip box to a single line. Returning
+        // startingHeight + our extra line mirrors the MeleeWeapon/Boots pattern instead.
         if (TooltipPatchContext.TryResolve(__instance, out _))
-            __result.Y += TooltipPatchContext.GetLineHeight(font);
+            __result = new Point(0, startingHeight + TooltipPatchContext.GetLineHeight(font));
     }
 
     public static void DrawPrefix(Item __instance, SpriteBatch spriteBatch, ref int x, ref int y, SpriteFont font, float alpha, StringBuilder overrideText)
