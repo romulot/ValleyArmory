@@ -1,0 +1,112 @@
+using System.IO.Compression;
+using System.Buffers.Binary;
+using ValleyArmory.Assets;
+using ValleyArmory.Catalog;
+using Xunit;
+
+namespace ValleyArmory.Tests;
+
+public sealed class SpriteSheetTests
+{
+    [Fact]
+    public void WeaponsSpritesheetHasSevenOccupiedSixteenPixelCells()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "weapons.png");
+        PngImage image = ReadRgbaPng(path);
+
+        Assert.Equal(112, image.Width);
+        Assert.Equal(16, image.Height);
+        Assert.Equal(7, image.Width / 16);
+
+        for (int cell = 0; cell < 7; cell++)
+        {
+            bool occupied = false;
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    if (image.Alpha[y, cell * 16 + x] != 0)
+                    {
+                        occupied = true;
+                        break;
+                    }
+                }
+
+                if (occupied)
+                    break;
+            }
+
+            Assert.True(occupied, $"Sprite cell {cell} is empty.");
+        }
+    }
+
+    [Fact]
+    public void WeaponDefinitionsUseUniqueIndicesZeroThroughSixAndSharedTexture()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "armory.json");
+        ArmoryCatalog catalog = new ArmoryCatalogLoader(new ArmoryCatalogValidator()).Load(path);
+        EquipmentDefinition[] weapons = catalog.Equipment
+            .Where(item => item.Type is EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer)
+            .ToArray();
+
+        Assert.Equal(7, weapons.Length);
+        Assert.Equal(Enumerable.Range(0, 7), weapons.Select(item => item.Sprite!.SpriteIndex).OrderBy(index => index));
+        Assert.All(weapons, weapon => Assert.Equal(AssetInjector.WeaponTextureAssetName, weapon.Sprite!.AssetName));
+    }
+
+    private static PngImage ReadRgbaPng(string path)
+    {
+        byte[] bytes = File.ReadAllBytes(path);
+        Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, bytes[..8]);
+
+        int width = 0;
+        int height = 0;
+        using MemoryStream compressed = new();
+        int offset = 8;
+        while (offset < bytes.Length)
+        {
+            int length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
+            ReadOnlySpan<byte> type = bytes.AsSpan(offset + 4, 4);
+            ReadOnlySpan<byte> payload = bytes.AsSpan(offset + 8, length);
+            offset += 12 + length;
+
+            if (type.SequenceEqual("IHDR"u8))
+            {
+                width = BinaryPrimitives.ReadInt32BigEndian(payload[..4]);
+                height = BinaryPrimitives.ReadInt32BigEndian(payload.Slice(4, 4));
+                Assert.Equal(8, payload[8]);
+                Assert.Equal(6, payload[9]);
+            }
+            else if (type.SequenceEqual("IDAT"u8))
+            {
+                compressed.Write(payload);
+            }
+            else if (type.SequenceEqual("IEND"u8))
+            {
+                break;
+            }
+        }
+
+        compressed.Position = 0;
+        using ZLibStream decompressed = new(compressed, CompressionMode.Decompress);
+        byte[] raw = new byte[height * (1 + width * 4)];
+        int read = decompressed.Read(raw, 0, raw.Length);
+        Assert.Equal(raw.Length, read);
+
+        byte[,] alpha = new byte[height, width];
+        int cursor = 0;
+        for (int y = 0; y < height; y++)
+        {
+            Assert.Equal(0, raw[cursor++]);
+            for (int x = 0; x < width; x++)
+            {
+                cursor += 3;
+                alpha[y, x] = raw[cursor++];
+            }
+        }
+
+        return new PngImage(width, height, alpha);
+    }
+
+    private sealed record PngImage(int Width, int Height, byte[,] Alpha);
+}
