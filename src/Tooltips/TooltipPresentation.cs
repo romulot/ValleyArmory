@@ -1,10 +1,9 @@
 using Microsoft.Xna.Framework;
 using ValleyArmory.Catalog;
-using ValleyArmory;
 
 namespace ValleyArmory.Tooltips;
 
-internal sealed record TooltipPresentation(Color NameColor, string RarityText);
+internal sealed record TooltipPresentation(Color? NameColor, string RarityText);
 
 internal sealed class TooltipPresentationResolver
 {
@@ -22,18 +21,30 @@ internal sealed class TooltipPresentationResolver
     )
     {
         presentation = null;
-        if (!string.Equals(qualifiedItemId, EquipmentIdentity.MinersBladeQualifiedItemId, StringComparison.Ordinal)
-            || !this.catalog.TryGetByQualifiedId(qualifiedItemId!, out EquipmentDefinition? equipment)
+        if (qualifiedItemId is null
+            || !this.catalog.TryGetByQualifiedId(qualifiedItemId, out EquipmentDefinition? equipment)
             || equipment is null
+            || equipment.Type is not (EquipmentType.Sword or EquipmentType.Dagger or EquipmentType.Hammer)
             || !this.catalog.TryGetRarity(equipment.Rarity, out RarityDefinition? rarity)
-            || rarity is null
-            || !TryParseRgb(rarity.NameColor, out Color color))
+            || rarity is null)
         {
             return false;
         }
 
         string rarityText = translate($"tooltip.rarity.{rarity.Id.ToLowerInvariant()}");
-        presentation = new TooltipPresentation(color, rarityText);
+        Color? nameColor = null;
+        Color color = default;
+        if (!string.Equals(rarity.Id, "Common", StringComparison.Ordinal)
+            && !TryParseRgb(rarity.NameColor, out color))
+        {
+            return false;
+        }
+        else if (!string.Equals(rarity.Id, "Common", StringComparison.Ordinal))
+        {
+            nameColor = color;
+        }
+
+        presentation = new TooltipPresentation(nameColor, rarityText);
         return true;
     }
 

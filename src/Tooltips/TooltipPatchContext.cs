@@ -2,13 +2,11 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
-using ValleyArmory;
 
 namespace ValleyArmory.Tooltips;
 
 internal static class TooltipPatchContext
 {
-    private const string MinersBladeQualifiedItemId = EquipmentIdentity.MinersBladeQualifiedItemId;
     private static TooltipPresentationResolver? resolver;
     private static ITranslationHelper? translations;
     private static IMonitor? monitor;
@@ -46,31 +44,15 @@ internal static class TooltipPatchContext
             && translations is not null
             && resolver.TryResolve(item.QualifiedItemId, key => translations.Get(key).ToString(), out presentation);
 
-        if (IsMinersBlade(item))
-        {
-            Trace($"rarity resolved: {resolved}");
-        }
-
         return resolved;
     }
 
     public static Color ResolveTitleColor(Color vanillaColor, Item? hoveredItem)
     {
-        if (IsMinersBlade(hoveredItem))
-        {
-            Trace("ResolveTitleColor called");
-            Trace($"hovered item type: {hoveredItem!.GetType().FullName}");
-            Trace($"hovered item QualifiedItemId: {hoveredItem.QualifiedItemId}");
-        }
-
-        return TryResolve(hoveredItem, out TooltipPresentation? presentation) && presentation is not null
-            ? presentation.NameColor
+        return TryResolve(hoveredItem, out TooltipPresentation? presentation)
+            && presentation?.NameColor is Color color
+            ? color
             : vanillaColor;
-    }
-
-    public static bool IsMinersBlade(Item? item)
-    {
-        return item is not null && string.Equals(item.QualifiedItemId, MinersBladeQualifiedItemId, StringComparison.Ordinal);
     }
 
     public static void Trace(string message)
