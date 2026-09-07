@@ -2,6 +2,7 @@ using StardewModdingAPI;
 using ValleyArmory.Assets;
 using ValleyArmory.Catalog;
 using ValleyArmory.DeveloperTools;
+using ValleyArmory.Tooltips;
 
 namespace ValleyArmory;
 
@@ -28,6 +29,11 @@ internal sealed class ModEntry : Mod
         helper.Events.Content.AssetRequested += assetInjector.OnAssetRequested;
 
         new MinersBladeGiveCommand(helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
+
+        _ = new TooltipPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(
+            new TooltipPresentationResolver(catalogIndex),
+            helper.Translation
+        );
 
         this.Monitor.Log(
             $"Valley Armory {this.ModManifest.Version} loaded with {catalog.Equipment.Count} validated equipment definitions; only Miner's Blade is enabled for the vertical slice.",

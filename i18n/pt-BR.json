@@ -3,6 +3,7 @@
   "rarity.rare.name": "Raro",
   "rarity.epic.name": "Épico",
   "rarity.legendary.name": "Lendário",
+  "tooltip.rarity.rare": "Raridade: Rara",
   "equipment.miners-blade.name": "Lâmina do Minerador",
   "equipment.miners-blade.description": "Uma lâmina prática, equilibrada para longos turnos no subterrâneo.",
   "equipment.black-iron-sword.name": "Espada de Ferro Negro",

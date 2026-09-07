@@ -9,6 +9,7 @@
 
     <EnableModDeploy>false</EnableModDeploy>
     <EnableModZip>true</EnableModZip>
+    <EnableHarmony>true</EnableHarmony>
     <ModFolderName>ValleyArmory</ModFolderName>
   </PropertyGroup>
 

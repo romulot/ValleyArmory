@@ -166,3 +166,34 @@ Não espere ainda cor de raridade, linha “Rare/Raro” ou iluminação.
 - resultado após salvar e recarregar.
 
 Qualquer error item, textura ausente, perda após reload ou divergência de stats bloqueia as fases de tooltip e iluminação.
+
+## Fase 4 — decoração de raridade no tooltip
+
+Somente `(W)romulot.ValleyArmory_MinersBlade` recebe decoração. A resolução usa
+o `QualifiedItemId`, consulta a raridade `Rare` no catálogo e converte
+`RarityDefinition.NameColor` (`#3B82F6`) para a cor azul do título. Nenhum nome,
+sprite ou texto traduzido participa da identidade.
+
+Harmony atua nos três pontos confirmados pela auditoria:
+
+- postfix em `MeleeWeapon.getExtraSpaceNeededForTooltipSpecialIcons` acrescenta
+  uma linha à altura calculada;
+- prefix em `MeleeWeapon.drawTooltip` desenha a linha localizada no início da
+  área específica da arma e avança `y`, preservando todas as linhas vanilla;
+- transpiler em `IClickableMenu.drawHoverText(StringBuilder, ...)` altera somente
+  a cor fornecida à chamada principal `SpriteBatch.DrawString` do
+  `boldTitleText`.
+
+A altura adicional é `max(48, ceil(font.MeasureString("TT").Y))`, seguindo o
+passo vertical mínimo usado pelo tooltip vanilla. A largura não é alterada.
+
+O transpiler espera exatamente uma sequência na qual a chamada principal de
+`DrawString(SpriteFont, string, Vector2, Color)` do título carrega
+`boldTitleText` e, imediatamente antes da chamada, `textColor.Value`. Se houver
+zero ou mais de uma correspondência, a aplicação falha. Qualquer falha ao
+localizar ou aplicar um dos três patches remove os patches Harmony pertencentes
+ao mod, desliga toda a decoração e emite um único `Warning`; o tooltip vanilla
+permanece disponível.
+
+Essa dependência de IL corresponde ao assembly `1.6.15.24356` e precisa ser
+revalidada em atualizações do jogo.
