@@ -55,6 +55,22 @@ public sealed class SpriteSheetTests
     }
 
     [Fact]
+    public void WeaponSpriteCellsStayOpaqueOrFullyTransparent()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "weapons.png");
+        PngImage image = ReadRgbaPng(path);
+
+        for (int y = 0; y < image.Height; y++)
+        {
+            for (int x = 0; x < image.Width; x++)
+            {
+                byte alpha = image.Alpha[y, x];
+                Assert.True(alpha == 0 || alpha == 255, $"Pixel ({x},{y}) has partial alpha {alpha}, which indicates anti-aliasing.");
+            }
+        }
+    }
+
+    [Fact]
     public void BootsSpritesheetHasThreeOccupiedSixteenPixelCellsWithTransparentMargins()
     {
         string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "boots.png");
@@ -215,19 +231,54 @@ public sealed class SpriteSheetTests
         int read = decompressed.Read(raw, 0, raw.Length);
         Assert.Equal(raw.Length, read);
 
+        const int bytesPerPixel = 4;
+        int stride = width * bytesPerPixel;
+        byte[] decoded = new byte[height * stride];
         byte[,] alpha = new byte[height, width];
         int cursor = 0;
         for (int y = 0; y < height; y++)
         {
-            Assert.Equal(0, raw[cursor++]);
-            for (int x = 0; x < width; x++)
+            byte filter = raw[cursor++];
+            Assert.InRange(filter, (byte)0, (byte)4);
+            int rowOffset = y * stride;
+            for (int column = 0; column < stride; column++)
             {
-                cursor += 3;
-                alpha[y, x] = raw[cursor++];
+                byte value = raw[cursor++];
+                byte left = column >= bytesPerPixel ? decoded[rowOffset + column - bytesPerPixel] : (byte)0;
+                byte above = y > 0 ? decoded[rowOffset - stride + column] : (byte)0;
+                byte upperLeft = y > 0 && column >= bytesPerPixel
+                    ? decoded[rowOffset - stride + column - bytesPerPixel]
+                    : (byte)0;
+
+                decoded[rowOffset + column] = filter switch
+                {
+                    0 => value,
+                    1 => unchecked((byte)(value + left)),
+                    2 => unchecked((byte)(value + above)),
+                    3 => unchecked((byte)(value + ((left + above) / 2))),
+                    4 => unchecked((byte)(value + Paeth(left, above, upperLeft))),
+                    _ => throw new InvalidDataException($"Unsupported PNG filter {filter}.")
+                };
             }
+
+            for (int x = 0; x < width; x++)
+                alpha[y, x] = decoded[rowOffset + x * bytesPerPixel + 3];
         }
 
         return new PngImage(width, height, alpha);
+    }
+
+    private static byte Paeth(byte left, byte above, byte upperLeft)
+    {
+        int estimate = left + above - upperLeft;
+        int leftDistance = Math.Abs(estimate - left);
+        int aboveDistance = Math.Abs(estimate - above);
+        int upperLeftDistance = Math.Abs(estimate - upperLeft);
+        return leftDistance <= aboveDistance && leftDistance <= upperLeftDistance
+            ? left
+            : aboveDistance <= upperLeftDistance
+                ? above
+                : upperLeft;
     }
 
     private sealed record PngImage(int Width, int Height, byte[,] Alpha);
