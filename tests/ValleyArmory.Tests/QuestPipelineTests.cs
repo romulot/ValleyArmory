@@ -122,6 +122,7 @@ public sealed class QuestPipelineTests
         SpecialOrderData order = SpecialOrderInjector.BuildSpecialOrder(quest, key => $"translated:{key}");
 
         Assert.Equal("Marlon", order.Requester);
+        Assert.Equal(QuestDuration.Month, order.Duration);
         Assert.False(order.Repeatable);
         Assert.Equal("MINE_LOWEST_LEVEL_REACHED 120", order.Condition);
 
@@ -133,6 +134,50 @@ public sealed class QuestPipelineTests
         SpecialOrderRewardData reward = Assert.Single(order.Rewards);
         Assert.Equal("Mail", reward.Type);
         Assert.Equal(QuestIdentifiers.PrismaticTrialMail, reward.Data["MailReceived"]);
+    }
+
+    [Theory]
+    [InlineData(false, true, 100, false, false)]
+    [InlineData(true, false, 100, false, false)]
+    [InlineData(true, true, 80, false, false)]
+    [InlineData(true, true, 120, false, false)]
+    [InlineData(true, true, 100, true, false)]
+    [InlineData(true, true, 100, false, true)]
+    public void PrismaticTrialSpawnRequiresHostActiveQuestEligibleFloorAndSafeState(
+        bool isMainPlayer,
+        bool isQuestActive,
+        int mineLevel,
+        bool hasEvent,
+        bool alreadyHasTarget
+    )
+    {
+        Assert.False(PrismaticTrialSpawnPolicy.IsEligible(isMainPlayer, isQuestActive, mineLevel, hasEvent, alreadyHasTarget));
+    }
+
+    [Theory]
+    [InlineData(PrismaticTrialSpawnPolicy.MinimumMineLevel)]
+    [InlineData(100)]
+    [InlineData(PrismaticTrialSpawnPolicy.MaximumMineLevel)]
+    public void PrismaticTrialCanSpawnExactlyOncePerEligibleFloorAndDay(int mineLevel)
+    {
+        PrismaticTrialSpawnTracker tracker = new();
+
+        Assert.True(PrismaticTrialSpawnPolicy.IsEligible(true, true, mineLevel, false, false));
+        Assert.True(tracker.TryReserve(42, mineLevel));
+        Assert.False(tracker.TryReserve(42, mineLevel));
+        Assert.True(tracker.TryReserve(43, mineLevel));
+    }
+
+    [Fact]
+    public void PrismaticTrialObjectiveOnlyTargetsIridiumGolemAndStopsAtFifteen()
+    {
+        EquipmentDefinition definition = GetDefinition("romulot.ValleyArmory_PrismaticBlade");
+        SpecialOrderData order = SpecialOrderInjector.BuildSpecialOrder(definition.Acquisition!.Quest!, key => key);
+        SpecialOrderObjectiveData objective = Assert.Single(order.Objectives);
+
+        Assert.Equal(MonsterIdentifiers.IridiumGolem, objective.Data["TargetName"]);
+        Assert.NotEqual(MonsterIdentifiers.GreenSlime, objective.Data["TargetName"]);
+        Assert.Equal("15", objective.RequiredCount);
     }
 
     [Fact]

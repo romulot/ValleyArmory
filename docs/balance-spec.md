@@ -263,10 +263,12 @@ sem alterar nenhuma chance de drop.
   Sword (60–80), com mais defesa (2 vs 0) e crítico (0.04 vs 0.02) mas
   menos velocidade (2 vs 8) — sidegrade coerente, não a arma
   numericamente superior do jogo. A missão (`Prismatic Trial`: 15 Iridium
-  Golem na mina 120) usa o mesmo monstro já empregado como drop raro do
-  Abyss Hammer (mina 80, 2%), reforçando Iridium Golem como referência de
-  "monstro de elite" já estabelecida no próprio catálogo — mantido sem
-  alteração.
+  Golems, liberada ao atingir a mina 120) adiciona um alvo por andar da mina
+  normal entre 81 e 119, no máximo uma vez por andar a cada dia enquanto a
+  ordem estiver ativa. São necessários 15 andares elegíveis ao longo de até
+  uma estação: esforço razoável para conteúdo endgame, sem depender de reset
+  repetido de andar. O mesmo monstro permanece
+  como alvo do drop raro do Abyss Hammer (mina 80, 2%).
 - `Abyss Hammer`: mais lento (-6) e com menos dano médio (58) que o Galaxy
   Hammer vanilla (-4, 80), mas com a maior defesa (4) e o maior knockback
   (1.8) do catálogo — identidade de "clava pesada defensiva", não uma

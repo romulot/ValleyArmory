@@ -39,8 +39,10 @@ Every item (except the Prismatic Blade) is available through at least one of:
 
 The **Prismatic Blade** is the sole exception: it is never sold, dropped, or craftable. It is
 obtained by completing the **Prismatic Trial**, a Special Order that unlocks at mine level 120 and
-requires slaying 15 Iridium Golems. Completing it mails the Prismatic Blade to every connected
-player.
+requires slaying 15 Iridium Golems. While the order is active, the host adds one Iridium Golem to
+each eligible regular-mine floor from 81 through 119, at most once per floor per in-game day. This
+doesn't replace vanilla monsters and doesn't affect the Skull Cavern or any location outside the
+quest. Completing it mails the Prismatic Blade to every connected player.
 
 See `docs/balance-spec.md` for the full stat/price/acquisition rationale.
 

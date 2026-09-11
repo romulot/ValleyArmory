@@ -1,7 +1,7 @@
 {
   "Name": "Valley Armory",
   "Author": "romulot",
-  "Version": "0.1.2",
+  "Version": "0.1.3",
   "Description": "Adds a data-driven RPG equipment progression system to Stardew Valley.",
   "UniqueID": "romulot.ValleyArmory",
   "EntryDll": "ValleyArmory.dll",

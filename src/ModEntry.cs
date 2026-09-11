@@ -59,6 +59,13 @@ internal sealed class ModEntry : Mod
         QuestMailInjector questMailInjector = new(catalogIndex, helper.Translation, this.Monitor);
         helper.Events.Content.AssetRequested += questMailInjector.OnAssetRequested;
 
+        PrismaticTrialSpawnController prismaticTrialSpawnController = new(this.Monitor);
+        helper.Events.GameLoop.SaveLoaded += prismaticTrialSpawnController.OnSaveLoaded;
+        helper.Events.GameLoop.DayStarted += prismaticTrialSpawnController.OnDayStarted;
+        helper.Events.GameLoop.ReturnedToTitle += prismaticTrialSpawnController.OnReturnedToTitle;
+        helper.Events.GameLoop.UpdateTicked += prismaticTrialSpawnController.OnUpdateTicked;
+        helper.Events.Player.Warped += prismaticTrialSpawnController.OnWarped;
+
         new ArmoryGiveCommand(catalogIndex, helper.Translation, this.Monitor).Register(helper.ConsoleCommands);
 
         _ = new DropPatchManager(this.ModManifest.UniqueID, this.Monitor).Apply(new DropRuleResolver(catalogIndex));

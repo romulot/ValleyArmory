@@ -980,9 +980,11 @@ qualquer branch por item.
 Nome (i18n): Prismatic Trial / Provação Prismática
 ID: romulot.ValleyArmory_PrismaticTrial
 Requester: Marlon
-Duração: 1 semana
+Duração: até o início da próxima estação (`QuestDuration.Month`)
 Condição de desbloqueio: MINE_LOWEST_LEVEL_REACHED 120
 Objetivo: derrotar 15 Golens de Irídio (Iridium Golem)
+Spawn: 1 por andar/dia na mina normal 81–119, somente com a ordem ativa
+Autoridade do spawn: host; aditivo, sem substituir monstros existentes
 Reward: carta com Prismatic Blade anexada, para toda a equipe
 Escopo multiplayer: Special Order por equipe; recompensa (mail) broadcast a todos os jogadores conectados
 ```
@@ -1014,7 +1016,8 @@ do equipamento vinculado, `ApplyTo` preserva carta vanilla existente).
 
 Carregar um save sem a condição de mina 120 e confirmar que a quest não
 aparece; avançar até a profundidade correspondente e confirmar que a
-Special Order aparece disponível/ativa; derrotar 15 Iridium Golem e
+Special Order aparece disponível/ativa; percorrer os andares 81–119 e
+confirmar um Iridium Golem por andar elegível/dia; derrotar 15 deles e
 confirmar conclusão; verificar recebimento da carta com a Prismatic Blade
 anexada; verificar tooltip/raridade Legendary/iluminação da espada
 recebida; salvar e recarregar para confirmar que a quest continua

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.3
+
+- Fixed the Prismatic Trial so it no longer depends on another mod to provide its target monsters.
+- Added one host-authoritative Iridium Golem per eligible regular-mine floor from 81 through 119
+  while the Prismatic Trial is active, limited to once per floor per in-game day.
+- Prevented trial spawns during events, on blocked tiles, near players, or when an Iridium Golem is
+  already present.
+- Changed the Prismatic Trial duration from `Week` to `Month`, so it expires at the start of the
+  next season instead of the next week.
+- Added automated coverage for spawn eligibility, daily floor deduplication, and the quest target.
+
 ## 0.1.0
 
 Initial release.

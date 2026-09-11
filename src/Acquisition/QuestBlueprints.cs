@@ -21,7 +21,7 @@ internal static class QuestBlueprints
     {
         [QuestIdentifiers.PrismaticTrial] = new QuestBlueprint(
             Requester: "Marlon",
-            Duration: QuestDuration.Week,
+            Duration: QuestDuration.Month,
             DescriptionKey: "quest.prismatic-trial.description",
             ObjectiveTargetMonster: QuestIdentifiers.PrismaticTrialTargetMonster,
             ObjectiveRequiredCount: QuestIdentifiers.PrismaticTrialRequiredKills,

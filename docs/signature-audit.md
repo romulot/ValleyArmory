@@ -658,6 +658,18 @@ Disassembly de `LetterViewerMenu.HandleItemCommand` confirma o parser do comando
 
 `FarmerTeam.specialOrders`/`completedSpecialOrders` são campos de **equipe** (`NetList`/`NetStringHashSet` em `FarmerTeam`, não em `Farmer`) — a quest é compartilhada pelo grupo todo. Disassembly de `MailReward.Grant()` confirma que ele chama `Game1.addMail(...)`, o mecanismo vanilla de **broadcast de correspondência para todos os jogadores conectados** (mesmo usado para correspondências de aniversário/festival). Decisão de design: ao concluir a Prismatic Trial, **toda a equipe recebe a carta e sua própria Prismatic Blade** — não só quem entregou o golpe final. Documentado explicitamente, não deixado ambíguo.
 
+### Disponibilidade do Iridium Golem para a Prismatic Trial
+
+Auditoria do executável 1.6.15 confirmou que a mina normal não cria `Iridium Golem`. O único construtor vanilla que escolhe esse nome é `RockGolem(Vector2, int)`, usado pelos monstros noturnos da fazenda: exige nível de combate 9+, `Game1.whichFarm == 4` (Wilderness Farm) e ainda aplica uma chance de 50%. O objetivo `SlayObjective` apenas observa mortes e compara `monster.Name` com `TargetName`; ele não cria o alvo. O drop do Abyss Hammer em `Monster.getExtraDropItems()` também só ocorre depois de uma morte e tampouco cria monstros.
+
+O Valley Armory agora fornece o alvo de forma aditiva em `PrismaticTrialSpawnController`: somente o host, somente com `romulot.ValleyArmory_PrismaticTrial` ativa, em `MineShaft` 81–119 e fora de eventos. É adicionado exatamente um `Iridium Golem` por andar/dia, salvo se o andar já contiver um, sem remover ou substituir monstros existentes. A escolha de tile usa `CanSpawnCharacterHere`, rejeita ações da layer `Buildings` e mantém seis tiles de distância dos jogadores. O rastreamento por dia/andar impede duplicação em updates e abuso por reentrada no mesmo dia; a varredura de `MineShaft.activeMines` permite que o host seja a única autoridade também quando um farmhand entrar primeiro no andar.
+
+`SlayObjective.OnMonsterSlain` aceita o alvo em qualquer mapa que não seja a fazenda (o padrão `IgnoreFarmMonsters=true`) e usa `monster.Name.Contains(TargetName)`. `OrderObjective.IncrementCount` limita o contador ao `RequiredCount`, portanto o progresso para em 15.
+
+### Duração mensal
+
+`QuestDuration.Month` não significa 28 dias completos após o aceite. `SpecialOrder.SetDuration` fixa o vencimento no início da estação seguinte; a quantidade exibida depende do dia em que a ordem é adicionada ou aceita.
+
 ### `SpecialOrder` real usada como precedente temático
 
 A entrada vanilla `Wizard2` já é uma Special Order com objetivo `Slay` de 1 "Prismatic Slime" + entrega de "Prismatic Jelly" — confirma que o próprio jogo já usa o tema prismático em Special Orders, reforçando a coerência de usar esse mesmo sistema para a Prismatic Blade.
@@ -672,3 +684,4 @@ A entrada vanilla `Wizard2` já é uma Special Order com objetivo `Slay` de 1 "P
 - A autoridade de multiplayer para `getExtraDropItems()` foi confirmada via análise estática da cadeia de chamadas (IL), não observada em uma sessão multiplayer real.
 - A autoridade por-jogador de `Data/TriggerActions`/`MarkCraftingRecipeKnown` foi confirmada por `HostOnly=False` nas entradas vanilla e pela assinatura de `RequestSetSimpleFlag`, não observada em uma sessão multiplayer real.
 - O comportamento de broadcast de `Game1.addMail`/idempotência de `FarmerTeam.AddSpecialOrder` foi confirmado por análise estática de IL, não observado em uma sessão multiplayer real.
+- O spawn host-authoritative da Prismatic Trial foi validado por código e testes de política, mas ainda não observado em uma sessão multiplayer ou split-screen real.
